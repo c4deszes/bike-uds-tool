@@ -1,0 +1,56 @@
+{
+    "version": 2,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "mingw-default",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/_build/${presetName}",
+            "cacheVariables": {
+                "UDS_LINE_BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "gcc-default",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/_build/${presetName}",
+            "cacheVariables": {
+                "UDS_LINE_BUILD_TESTS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build-test-targets",
+            "hidden": true,
+            "targets": [
+                "test_UdsLine_Properties"
+            ]
+        },
+        {
+            "name": "build-docs-targets",
+            "hidden": true,
+            "targets": [
+                "docs"
+            ]
+        },
+        {
+            "name": "build-tests-gcc",
+            "configurePreset": "gcc-default",
+            "inherits": "build-test-targets"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "test-gcc",
+            "configurePreset": "gcc-default",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

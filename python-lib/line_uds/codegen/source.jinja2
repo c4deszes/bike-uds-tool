@@ -1,0 +1,31 @@
+#include "uds_api.h"
+#include "uds_line.h"
+#include "uds_diag.h"
+
+#include "uds_gen.h"
+
+UDS_AppContainer_t UDS_AppContainer;
+
+void UDS_OnGetProperty(uint16_t property_id) {
+    switch (property_id) {
+        {% for property in profile.properties %}
+        case UDS_APP_PROPERTY_{{property.prop_name}}_ID: {
+            {{property.get_ctype()}} value = UDS_AppContainer.{{property.prop_name}};
+            UDS_EnqueueGetPropertyResponse(property_id, sizeof(value), (uint8_t*)&value);
+            break;
+        }
+        {% endfor %}
+        default:
+            // enqueue no scuh property error
+            UDS_EnqueueGetPropertyError(property_id, UDS_PROPERTY_GET_RETURN_NO_SUCH_PROPERTY);
+            break;
+    }
+}
+
+void UDS_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data) {
+
+}
+
+void UDS_OnServiceCall(uint16_t service_id, uint8_t size, uint8_t* data) {
+
+}
