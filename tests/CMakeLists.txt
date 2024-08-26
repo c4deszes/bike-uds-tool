@@ -4,7 +4,7 @@ function(add_test TARGET)
     gtest_discover_tests(${TARGET} DISCOVERY_MODE POST_BUILD)
 endfunction()
 
-## Application mode tests
+## Property retrival and setting
 add_executable(test_UdsLine_Properties EXCLUDE_FROM_ALL)
 target_sources(test_UdsLine_Properties PRIVATE
     test_UdsLine_Properties.cpp
@@ -15,3 +15,9 @@ target_link_libraries(test_UdsLine_Properties PRIVATE
     line-protocol-adapter-sources
 )
 add_test(test_UdsLine_Properties)
+
+## Generated code testing
+uds_codegen(
+    TARGET test-uds-lib
+    PROFILE example_profile.json
+)

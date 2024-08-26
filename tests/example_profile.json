@@ -1,0 +1,23 @@
+{
+    "services": {
+        
+    },
+    "properties": {
+        "AutomaticDiagnostics": {
+            "id": "0x4000",
+            "type": "bool"
+        },
+        "BrightnessCurve_Cutoff_X": {
+            "id": "0x4010",
+            "type": "uint16_t",
+            "min": 0,
+            "max": 400
+        },
+        "BrightnessCurve_Cutoff_Y": {
+            "id": "0x4011",
+            "type": "uint16_t",
+            "min": 0,
+            "max": 1000
+        }
+    }
+}

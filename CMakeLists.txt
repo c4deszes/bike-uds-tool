@@ -38,13 +38,13 @@ cmake_parse_arguments(
         COMMAND ${Python_EXECUTABLE} -m line_uds.codegen ${_PROFILE} --output ${uds_codegen_dir}
         DEPENDS ${_PROFILE}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        BYPRODUCTS ${uds_codegen_dir}/uds_gencode.c ${uds_codegen_dir}/uds_gencode.h
+        BYPRODUCTS ${uds_codegen_dir}/uds_gen.c ${uds_codegen_dir}/uds_gen.h
     )
     add_library(${_TARGET} INTERFACE)
-    target_sources(${_TARGET} INTERFACE ${uds_codegen_dir}/uds_gencode.c)
+    target_sources(${_TARGET} INTERFACE ${uds_codegen_dir}/uds_gen.c)
     target_include_directories(${_TARGET} INTERFACE ${uds_codegen_dir})
     target_link_libraries(${_TARGET} INTERFACE line-uds-sources line-uds-api)
-    add_dependencies(${_TARGET} line-codegen-${_TARGET})
+    add_dependencies(${_TARGET} uds-codegen-${_TARGET})
 endfunction()
 
 if(UDS_LINE_BUILD_TESTS)
