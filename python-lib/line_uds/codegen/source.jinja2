@@ -23,7 +23,25 @@ void UDS_OnGetProperty(uint16_t property_id) {
 }
 
 void UDS_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data) {
-
+    switch(property_id) {
+        {% for property in profile.properties %}
+        case UDS_APP_PROPERTY_{{property.prop_name}}_ID: {
+            if (size != sizeof({{property.get_ctype()}})) {
+                UDS_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_WRITE_FAILURE);
+                break;
+            }
+            {{property.get_ctype()}} value = *(({{property.get_ctype()}}*)data);
+            UDS_AppContainer.{{property.prop_name}} = value;
+            UDS_App_OnPropertyChange_{{property.prop_name}}();
+            UDS_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_SUCCESS);
+            break;
+        }
+        {% endfor %}
+        default:
+            // enqueue no scuh property error
+            UDS_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_NO_SUCH_PROPERTY);
+            break;
+    }
 }
 
 void UDS_OnServiceCall(uint16_t service_id, uint8_t size, uint8_t* data) {

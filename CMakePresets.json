@@ -28,7 +28,8 @@
             "name": "build-test-targets",
             "hidden": true,
             "targets": [
-                "test_UdsLine_Properties"
+                "test_UdsLine_GetProperties",
+                "test_UdsLine_SetProperties"
             ]
         },
         {

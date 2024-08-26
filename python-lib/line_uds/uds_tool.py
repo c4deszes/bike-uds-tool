@@ -18,13 +18,13 @@ class UdsRawTool():
         self.master = master
 
     def get_property(self, address: int, prop_id: int, delay: float = 0.05, timeout: float = 1):
-        self.master.send_data(UDS_PROPERTY_GET_CALL_REQUEST_ID | address, [prop_id.to_bytes(2, 'big')])
+        self.master.send_data(UDS_PROPERTY_GET_CALL_REQUEST_ID | address, list(prop_id.to_bytes(2, 'big')))
         time.sleep(delay)
 
         start = time.time()
         while time.time() - start < timeout:
             response = self.master.request(UDS_PROPERTY_GET_RETURN_REQUEST_ID | address)
-            if len(response) != 3:
+            if len(response) < 3:
                 raise UdsGetPropertyException("Invalid response length")
             response_addr = response[0] << 8 | response[1]
             if response_addr & UDS_PROPERTY_STATUS_MASK:
@@ -54,4 +54,4 @@ class UdsTool():
         self.profiles[node] = (addr, profile)
     
     def get_property(self, node, prop):
-        
+        pass
