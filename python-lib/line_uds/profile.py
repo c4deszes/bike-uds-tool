@@ -2,7 +2,7 @@
 
 class UdsProperty():
 
-    def __init__(self, name, prop_id) -> None:
+    def __init__(self, name: str, prop_id: int) -> None:
         self.prop_name = name
         self.prop_id = prop_id
 
