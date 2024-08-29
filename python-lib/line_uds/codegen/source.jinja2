@@ -6,6 +6,18 @@
 
 UDS_AppContainer_t UDS_AppContainer;
 
+void UDS_InitProperties(void) {
+    {% for property in profile.properties %}
+    {%- if "UdsNumericProperty" in property.__class__.__name__ %}
+    UDS_AppContainer.{{property.prop_name}} = {{property.default_value}};
+    {%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
+    UDS_AppContainer.{{property.prop_name}} = {{"true" if property.default_value else "false"}};
+    {%- elif "UdsEnumProperty" in property.__class__.__name__ and property.default_value != None %}
+    UDS_AppContainer.{{property.prop_name}} = UDS_APP_PROPERTY_{{property.prop_name}}_VALUE_{{property.default_value}};
+    {%- endif %}
+    {% endfor %}
+}
+
 void UDS_OnGetProperty(uint16_t property_id) {
     switch (property_id) {
         {% for property in profile.properties %}

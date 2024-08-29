@@ -14,10 +14,11 @@ class UdsProperty():
 
 class UdsNumericProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, size, signed) -> None:
+    def __init__(self, name, prop_id, size, signed, default: int=0) -> None:
         super().__init__(name, prop_id)
         self.size = size
         self.signed = signed
+        self.default_value = default
 
     def encode(self, value: int) -> bytearray:
         return bytearray(value.to_bytes(self.size, 'little', signed=self.signed))
@@ -32,8 +33,9 @@ class UdsNumericProperty(UdsProperty):
 
 class UdsBooleanProperty(UdsProperty):
 
-    def __init__(self, name, prop_id) -> None:
+    def __init__(self, name, prop_id, default=False) -> None:
         super().__init__(name, prop_id)
+        self.default_value = default
 
     def encode(self, value: bool) -> bytearray:
         if value:
@@ -50,9 +52,10 @@ class UdsBooleanProperty(UdsProperty):
 
 class UdsEnumProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, values) -> None:
+    def __init__(self, name, prop_id, values, default=None) -> None:
         super().__init__(name, prop_id)
         self.values = values
+        self.default_value = default
 
     def encode(self, value) -> bytearray:
         # todo: error handling (value not in values)

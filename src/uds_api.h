@@ -8,6 +8,8 @@ void UDS_Init();
 void UDS_LINE_Init();
 
 // Generated code interfaces
+void UDS_InitProperties();
+
 void UDS_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data);
 
 /**

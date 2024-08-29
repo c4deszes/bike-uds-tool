@@ -4,6 +4,10 @@
 
 #include "line_diagnostics.h"
 
+void UDS_Init() {
+    UDS_InitProperties();
+}
+
 void UDS_LINE_Init() {
     // LINE_Diag_RegisterUnicastListener(UDS_SERVICE_CALL_REQUEST_ID, _FLASH_LINE_OnPageWriteHandler);
     // LINE_Diag_RegisterUnicastPublisher(UDS_SERVICE_RETURN_REQUEST_ID, _FLASH_LINE_GetWriteStatusHandler);
