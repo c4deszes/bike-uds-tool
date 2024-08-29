@@ -47,3 +47,11 @@ void UDS_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data) {
 void UDS_OnServiceCall(uint16_t service_id, uint8_t size, uint8_t* data) {
 
 }
+
+static void _UDS_AppEmptyHandler(void) {
+    // do nothing
+}
+
+{% for property in profile.properties -%}
+void UDS_App_OnPropertyChange_{{property.prop_name}}(void) __attribute__((weak, alias("_UDS_AppEmptyHandler")));
+{% endfor %}
