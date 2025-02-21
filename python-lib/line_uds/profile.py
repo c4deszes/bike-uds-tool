@@ -21,6 +21,8 @@ class UdsNumericProperty(UdsProperty):
         self.default_value = default
 
     def encode(self, value: int) -> bytearray:
+        if isinstance(value, str):
+            value = int(value)
         return bytearray(value.to_bytes(self.size, 'little', signed=self.signed))
 
     def decode(self, data: bytearray) -> int:

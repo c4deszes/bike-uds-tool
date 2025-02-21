@@ -7,7 +7,7 @@ project(
 option(UDS_LINE_BUILD_TESTS "Enables library test cases" OFF)
 
 include(tools/cmake/CPM.cmake)
-CPMAddPackage("gh:c4deszes/bike-line-protocol@0.1.0")
+CPMAddPackage("gh:c4deszes/bike-line-protocol#feature/multichannel-support")
 
 add_library(line-uds-api INTERFACE)
 target_include_directories(line-uds-api INTERFACE
