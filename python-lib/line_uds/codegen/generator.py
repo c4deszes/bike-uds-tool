@@ -41,7 +41,7 @@ def main():
         json_config = json.load(json_file)
         for name, profile in json_config.items():
             # TODO: path should be relative to the config file
-            uds_profile = load_profile(profile['profile'])
+            uds_profile = load_profile(os.path.join(os.path.dirname(args.config), profile['profile']))
             uds_profile.name = name
             uds_profile.channel = int(profile['channel'])
             config.profiles.append(uds_profile)
