@@ -73,6 +73,8 @@ class UdsEnumProperty(UdsProperty):
 class UdsProfile():
 
     def __init__(self) -> None:
+        self.name = None
+        self.channel: int = None
         self.services = []
         self.properties = []
 

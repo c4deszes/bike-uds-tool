@@ -222,6 +222,7 @@ class UdsTool():
             address = self._master.network.get_node(address)
         if isinstance(prop_id, str):
             prop_id = self.nodes[address].profile.get_property(prop_id).prop_id
+        # TODO: decode value
         return self.get_property_raw(address, prop_id, delay, wait, timeout)
     
     def set_property(self, address: Union[int, str], prop_id: Union[int, str], value, delay: float = 0.05,

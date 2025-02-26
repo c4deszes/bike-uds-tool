@@ -5,31 +5,43 @@ function(add_test TARGET)
 endfunction()
 
 ## Property retrival
-add_executable(test_UdsLine_GetProperties EXCLUDE_FROM_ALL)
-target_sources(test_UdsLine_GetProperties PRIVATE
-    test_UdsLine_GetProperties.cpp
-)
-target_link_libraries(test_UdsLine_GetProperties PRIVATE
-    line-uds-api line-uds-sources 
-    line-protocol-api line-protocol-sources
-    line-protocol-adapter-sources
-)
-add_test(test_UdsLine_GetProperties)
+# add_executable(test_UdsLine_GetProperties EXCLUDE_FROM_ALL)
+# target_sources(test_UdsLine_GetProperties PRIVATE
+#     test_UdsLine_GetProperties.cpp
+# )
+# target_link_libraries(test_UdsLine_GetProperties PRIVATE
+#     line-uds-api line-uds-sources 
+#     line-protocol-api line-protocol-sources
+#     line-protocol-adapter-sources
+# )
+# add_test(test_UdsLine_GetProperties)
 
-## Property setting
-add_executable(test_UdsLine_SetProperties EXCLUDE_FROM_ALL)
-target_sources(test_UdsLine_SetProperties PRIVATE
-    test_UdsLine_SetProperties.cpp
-)
-target_link_libraries(test_UdsLine_SetProperties PRIVATE
-    line-uds-api line-uds-sources 
-    line-protocol-api line-protocol-sources
-    line-protocol-adapter-sources
-)
-add_test(test_UdsLine_SetProperties)
+# ## Property setting
+# add_executable(test_UdsLine_SetProperties EXCLUDE_FROM_ALL)
+# target_sources(test_UdsLine_SetProperties PRIVATE
+#     test_UdsLine_SetProperties.cpp
+# )
+# target_link_libraries(test_UdsLine_SetProperties PRIVATE
+#     line-uds-api line-uds-sources 
+#     line-protocol-api line-protocol-sources
+#     line-protocol-adapter-sources
+# )
+# add_test(test_UdsLine_SetProperties)
 
 ## Generated code testing
 uds_codegen(
-    TARGET test-uds-lib
-    PROFILE example_profile.json
+    TARGET test-uds-lib-single
+    CONFIG codegen_single.json
 )
+
+# 
+add_executable(test_UdsLine_Properties EXCLUDE_FROM_ALL)
+target_sources(test_UdsLine_Properties PRIVATE
+    test_UdsLine_Properties.cpp
+)
+target_link_libraries(test_UdsLine_Properties PRIVATE
+    line-uds-api
+    line-protocol-api line-protocol-sources
+    test-uds-lib-single
+)
+add_test(test_UdsLine_Properties)

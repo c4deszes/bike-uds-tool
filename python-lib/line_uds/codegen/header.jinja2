@@ -4,11 +4,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+void UDS_Init(void);
+
+{% for profile in config.profiles %}
 {% for property in profile.properties -%}
-#define UDS_APP_PROPERTY_{{property.prop_name}}_ID {{property.prop_id}}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID {{property.prop_id}}
 {% endfor %}
 {% for property in profile.properties -%}
-void UDS_App_OnPropertyChange_{{property.prop_name}}(void);
+void UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}(void);
 {% endfor %}
 
 {% for property in profile.properties -%}
@@ -18,7 +21,7 @@ void UDS_App_OnPropertyChange_{{property.prop_name}}(void);
 
 {%- elif "UdsEnumProperty" in property.__class__.__name__ %}
 {% for value in property.values -%}
-#define UDS_APP_PROPERTY_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
 {% endfor %}
 {% endif %}
 {% endfor %}
@@ -27,8 +30,12 @@ typedef struct {
     {% for property in profile.properties %}
     {{property.get_ctype()}} {{property.prop_name}};
     {% endfor %}
-} UDS_AppContainer_t;
+} UDS_Properties_{{profile.name}}_t;
 
-extern UDS_AppContainer_t UDS_AppContainer;
+extern UDS_Properties_{{profile.name}}_t UDS_Properties_{{profile.name}};
+
+// Reset all properties to their default values
+void UDS_ResetProperties_{{profile.name}}(void);
+{% endfor %}
 
 #endif

@@ -3,21 +3,27 @@
         
     },
     "properties": {
-        "AutomaticDiagnostics": {
+        "BooleanProperty": {
             "id": "0x4000",
             "type": "bool"
         },
-        "BrightnessCurve_Cutoff_X": {
-            "id": "0x4010",
-            "type": "uint16_t",
+        "Integer8Property": {
+            "id": "0x4001",
+            "type": "uint8",
             "min": 0,
             "max": 400
         },
-        "BrightnessCurve_Cutoff_Y": {
-            "id": "0x4011",
-            "type": "uint16_t",
+        "Integer16Property": {
+            "id": "0x4002",
+            "type": "uint16",
             "min": 0,
-            "max": 1000
+            "max": 400
+        },
+        "Integer32Property": {
+            "id": "0x4003",
+            "type": "uint32",
+            "min": 0,
+            "max": 400
         }
     }
 }
