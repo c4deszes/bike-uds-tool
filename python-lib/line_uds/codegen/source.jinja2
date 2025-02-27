@@ -14,7 +14,7 @@ void UDS_ResetProperties_{{profile.name}}(void) {
     {%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
     UDS_Properties_{{profile.name}}.{{property.prop_name}} = {{"true" if property.default_value else "false"}};
     {%- elif "UdsEnumProperty" in property.__class__.__name__ and property.default_value != None %}
-    UDS_Properties_{{profile.name}}.{{property.prop_name}} = UDS_APP_PROPERTY_{{property.prop_name}}_VALUE_{{property.default_value}};
+    UDS_Properties_{{profile.name}}.{{property.prop_name}} = UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{property.default_value}};
     {%- endif %}
     {% endfor %}
 }
