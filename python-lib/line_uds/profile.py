@@ -19,6 +19,8 @@ class UdsNumericProperty(UdsProperty):
         self.size = size
         self.signed = signed
         self.default_value = default
+        self.min = -(2 ** (self.size * 8 - 1)) if self.signed else 0
+        self.max = (2 ** (self.size * 8 - 1)) - 1 if self.signed else (2 ** (self.size * 8)) - 1
 
     def encode(self, value: int) -> bytearray:
         if isinstance(value, str):
