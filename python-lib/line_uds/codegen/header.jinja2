@@ -32,7 +32,7 @@ static bool UDS_App_IsPropertyValid_{{profile.name}}_{{property.prop_name}}() {
     return UDS_Properties_{{profile.name}}.{{property.prop_name}} >= UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MIN &&
            UDS_Properties_{{profile.name}}.{{property.prop_name}} <= UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MAX;
 }
-static {{property.get_ctype()}} UDS_App_App_GetValidProperty_{{profile.name}}_{{property.prop_name}}() {
+static {{property.get_ctype()}} UDS_App_GetValidProperty_{{profile.name}}_{{property.prop_name}}() {
     if(UDS_App_IsPropertyValid_{{profile.name}}_{{property.prop_name}}()) {
         return UDS_Properties_{{profile.name}}.{{property.prop_name}};
     }
