@@ -7,7 +7,7 @@ project(
 option(UDS_LINE_BUILD_TESTS "Enables library test cases" OFF)
 
 include(tools/cmake/CPM.cmake)
-CPMAddPackage("gh:c4deszes/bike-line-protocol#feature/multichannel-support")
+CPMAddPackage("gh:c4deszes/bike-line-protocol@0.2.0")
 
 find_package(Python REQUIRED)
 
