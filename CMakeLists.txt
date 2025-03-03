@@ -7,7 +7,9 @@ project(
 option(UDS_LINE_BUILD_TESTS "Enables library test cases" OFF)
 
 include(tools/cmake/CPM.cmake)
-CPMAddPackage("gh:c4deszes/bike-line-protocol@0.1.0")
+CPMAddPackage("gh:c4deszes/bike-line-protocol@0.2.0")
+
+find_package(Python REQUIRED)
 
 add_library(line-uds-api INTERFACE)
 target_include_directories(line-uds-api INTERFACE
@@ -15,19 +17,12 @@ target_include_directories(line-uds-api INTERFACE
 )
 target_link_libraries(line-uds-api INTERFACE line-protocol-api)
 
-add_library(line-uds-sources INTERFACE)
-target_sources(line-uds-sources INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/uds_call.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/uds_line.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/uds_property.c
-)
-
 function(uds_codegen)
 
 cmake_parse_arguments(
     ""
     ""
-    "TARGET;PROFILE"
+    "TARGET;CONFIG"
     ""
     ${ARGN}
 )
@@ -35,15 +30,15 @@ cmake_parse_arguments(
     set(uds_codegen_dir ${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}_gencode)
     add_custom_target(
         uds-codegen-${_TARGET}
-        COMMAND ${Python_EXECUTABLE} -m line_uds.codegen ${_PROFILE} --output ${uds_codegen_dir}
-        DEPENDS ${_PROFILE}
+        COMMAND ${Python_EXECUTABLE} -m line_uds.codegen ${_CONFIG} --output ${uds_codegen_dir}
+        DEPENDS ${_CONFIG}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         BYPRODUCTS ${uds_codegen_dir}/uds_gen.c ${uds_codegen_dir}/uds_gen.h
     )
     add_library(${_TARGET} INTERFACE)
     target_sources(${_TARGET} INTERFACE ${uds_codegen_dir}/uds_gen.c)
     target_include_directories(${_TARGET} INTERFACE ${uds_codegen_dir})
-    target_link_libraries(${_TARGET} INTERFACE line-uds-sources line-uds-api)
+    target_link_libraries(${_TARGET} INTERFACE line-uds-api)
     add_dependencies(${_TARGET} uds-codegen-${_TARGET})
 endfunction()
 

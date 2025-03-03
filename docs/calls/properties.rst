@@ -14,13 +14,14 @@ Master requests ``0x0B8X <PropertyId>``, where ``PropertyId`` is a 16bit identif
 Master polls the device until it responds with ``0x0B9X <PropertyId> <Value>``, where ``Value`` is
 a data array.
 
-Intermediate response can be ``0x0B9X <0b1|PropertyId> 0x01`` if the device is still processing the
-request, here's the list of possible intermediate responses:
+The peripheral may respond with a status message instead, in this case the first bit of ``PropertyId``
+is set to 1. This status response can be ``0x0B9X <0b1|PropertyId> 0x01`` if the device is still
+processing the request, here's the list of possible status responses:
 
 - ``0x00``: No request has been received
-- ``0x01``: Response is not ready yet
-- ``0x02``: Property not found
-- ``0x03``: Property not readable
+- ``0x02``: Response is not ready yet
+- ``0x03``: Property not found
+- ``0x04``: Property not readable
 - ``0x0F``: Bad request
 
 Set property

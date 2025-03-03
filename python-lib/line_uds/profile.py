@@ -19,8 +19,12 @@ class UdsNumericProperty(UdsProperty):
         self.size = size
         self.signed = signed
         self.default_value = default
+        self.min = -(2 ** (self.size * 8 - 1)) if self.signed else 0
+        self.max = (2 ** (self.size * 8 - 1)) - 1 if self.signed else (2 ** (self.size * 8)) - 1
 
     def encode(self, value: int) -> bytearray:
+        if isinstance(value, str):
+            value = int(value)
         return bytearray(value.to_bytes(self.size, 'little', signed=self.signed))
 
     def decode(self, data: bytearray) -> int:
@@ -71,6 +75,8 @@ class UdsEnumProperty(UdsProperty):
 class UdsProfile():
 
     def __init__(self) -> None:
+        self.name = None
+        self.channel: int = None
         self.services = []
         self.properties = []
 

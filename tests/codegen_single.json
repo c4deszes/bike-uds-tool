@@ -1,0 +1,6 @@
+{
+    "FrontLight": {
+        "channel": 0,
+        "profile": "example_profile.json"
+    }
+}

@@ -1,69 +1,227 @@
-#include "uds_api.h"
-#include "uds_line.h"
 #include "uds_diag.h"
-
 #include "uds_gen.h"
 
-UDS_AppContainer_t UDS_AppContainer;
+#include "line_diagnostics.h"
 
-void UDS_InitProperties(void) {
+{% for profile in config.profiles %}
+UDS_Properties_{{profile.name}}_t UDS_Properties_{{profile.name}};
+
+
+void UDS_ResetProperties_{{profile.name}}(void) {
     {% for property in profile.properties %}
     {%- if "UdsNumericProperty" in property.__class__.__name__ %}
-    UDS_AppContainer.{{property.prop_name}} = {{property.default_value}};
+    UDS_Properties_{{profile.name}}.{{property.prop_name}} = {{property.default_value}};
     {%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
-    UDS_AppContainer.{{property.prop_name}} = {{"true" if property.default_value else "false"}};
+    UDS_Properties_{{profile.name}}.{{property.prop_name}} = {{"true" if property.default_value else "false"}};
     {%- elif "UdsEnumProperty" in property.__class__.__name__ and property.default_value != None %}
-    UDS_AppContainer.{{property.prop_name}} = UDS_APP_PROPERTY_{{property.prop_name}}_VALUE_{{property.default_value}};
+    UDS_Properties_{{profile.name}}.{{property.prop_name}} = UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{property.default_value}};
     {%- endif %}
     {% endfor %}
 }
 
-void UDS_OnGetProperty(uint16_t property_id) {
+static bool UDS_{{profile.name}}_GetProperty_RequestReceived = false;
+static bool UDS_{{profile.name}}_GetProperty_ResponseSet = false;
+static uint16_t UDS_{{profile.name}}_GetProperty_PropertyId = UDS_PROPERTY_ID_RESERVED;
+static uint8_t UDS_{{profile.name}}_GetProperty_Status = UDS_PROPERTY_GET_RETURN_NOT_READY;
+static uint8_t UDS_{{profile.name}}_GetProperty_ResponseSize = 0;
+// TODO: set to maximum property size
+static uint8_t UDS_{{profile.name}}_GetProperty_Response[32];
+
+static void UDS_{{profile.name}}_EnqueueGetPropertyResponse(uint16_t property_id, uint8_t size, uint8_t* response) {
+    UDS_{{profile.name}}_GetProperty_PropertyId = property_id;
+    UDS_{{profile.name}}_GetProperty_ResponseSize = size;
+    for (int i = 0; i < size; i++) {
+        UDS_{{profile.name}}_GetProperty_Response[i] = response[i];
+    }
+    UDS_{{profile.name}}_GetProperty_Status = UDS_PROPERTY_GET_RETURN_PREPARED;
+    UDS_{{profile.name}}_GetProperty_ResponseSet = true;
+}
+
+static void UDS_{{profile.name}}_EnqueueGetPropertyError(uint16_t property_id, uint8_t error_code) {
+    UDS_{{profile.name}}_GetProperty_PropertyId = property_id;
+    UDS_{{profile.name}}_GetProperty_Status = error_code;
+    UDS_{{profile.name}}_GetProperty_ResponseSet = true;
+}
+
+static void UDS_{{profile.name}}_ResetGetPropertyResponse() {
+    UDS_{{profile.name}}_GetProperty_ResponseSet = false;
+    UDS_{{profile.name}}_GetProperty_PropertyId = UDS_PROPERTY_ID_RESERVED;
+    UDS_{{profile.name}}_GetProperty_Status = UDS_PROPERTY_GET_RETURN_NOT_READY;
+}
+
+void UDS_{{profile.name}}_OnGetProperty(uint16_t property_id) {
     switch (property_id) {
         {% for property in profile.properties %}
-        case UDS_APP_PROPERTY_{{property.prop_name}}_ID: {
-            {{property.get_ctype()}} value = UDS_AppContainer.{{property.prop_name}};
-            UDS_EnqueueGetPropertyResponse(property_id, sizeof(value), (uint8_t*)&value);
+        case UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID: {
+            {{property.get_ctype()}} value = UDS_Properties_{{profile.name}}.{{property.prop_name}};
+            UDS_{{profile.name}}_EnqueueGetPropertyResponse(property_id, sizeof(value), (uint8_t*)&value);
             break;
         }
         {% endfor %}
         default:
-            // enqueue no scuh property error
-            UDS_EnqueueGetPropertyError(property_id, UDS_PROPERTY_GET_RETURN_NO_SUCH_PROPERTY);
+            // enqueue no such property error
+            UDS_{{profile.name}}_EnqueueGetPropertyError(property_id, UDS_PROPERTY_GET_RETURN_NO_SUCH_PROPERTY);
             break;
     }
 }
 
-void UDS_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data) {
-    switch(property_id) {
-        {% for property in profile.properties %}
-        case UDS_APP_PROPERTY_{{property.prop_name}}_ID: {
-            if (size != sizeof({{property.get_ctype()}})) {
-                UDS_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_WRITE_FAILURE);
-                break;
+static void UDS_LINE_{{profile.name}}_GetCallHandler(uint16_t request, uint8_t size, uint8_t* payload) {
+    UDS_{{profile.name}}_GetProperty_RequestReceived = true;
+
+    if (size == 2) {
+        uint16_t property_id = (((uint16_t)payload[0]) << 8) | payload[1];
+        UDS_{{profile.name}}_OnGetProperty(property_id);
+    }
+    else {
+        UDS_{{profile.name}}_EnqueueGetPropertyError(UDS_PROPERTY_ID_RESERVED, UDS_PROPERTY_GET_RETURN_BAD_REQUEST);
+    }
+}
+
+bool UDS_LINE_{{profile.name}}_GetReturnHandler(uint16_t request, uint8_t* size, uint8_t* payload) {
+    if (UDS_{{profile.name}}_GetProperty_ResponseSet) {
+        if (UDS_{{profile.name}}_GetProperty_Status == UDS_PROPERTY_GET_RETURN_PREPARED) {
+            // respond with prepared data
+            payload[0] = (UDS_{{profile.name}}_GetProperty_PropertyId >> 8) & 0xFF;
+            payload[1] = UDS_{{profile.name}}_GetProperty_PropertyId & 0xFF;
+            for (int i = 0; i < UDS_{{profile.name}}_GetProperty_ResponseSize; i++) {
+                payload[2 + i] = UDS_{{profile.name}}_GetProperty_Response[i];
             }
-            {{property.get_ctype()}} value = *(({{property.get_ctype()}}*)data);
-            UDS_AppContainer.{{property.prop_name}} = value;
-            UDS_App_OnPropertyChange_{{property.prop_name}}();
-            UDS_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_SUCCESS);
-            break;
+            *size = 2 + UDS_{{profile.name}}_GetProperty_ResponseSize;
+
+            UDS_{{profile.name}}_ResetGetPropertyResponse();
+            return true;
         }
-        {% endfor %}
-        default:
-            // enqueue no scuh property error
-            UDS_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_NO_SUCH_PROPERTY);
-            break;
+        else {
+            payload[0] = (UDS_{{profile.name}}_GetProperty_PropertyId >> 8) & 0xFF | 0x80;
+            payload[1] = UDS_{{profile.name}}_GetProperty_PropertyId & 0xFF;
+            payload[2] = UDS_{{profile.name}}_GetProperty_Status;
+            *size = 3;
+
+            UDS_{{profile.name}}_ResetGetPropertyResponse();
+            return true;
+        }
     }
+    else {
+        if (UDS_{{profile.name}}_GetProperty_RequestReceived) {
+            payload[0] = (UDS_{{profile.name}}_GetProperty_PropertyId >> 8) & 0xFF | 0x80;
+            payload[1] = UDS_{{profile.name}}_GetProperty_PropertyId & 0xFF;
+            payload[2] = UDS_PROPERTY_GET_RETURN_NOT_READY;
+            *size = 3;
+            return true;
+        }
+        else {
+            payload[0] = (UDS_{{profile.name}}_GetProperty_PropertyId >> 8) & 0xFF | 0x80;
+            payload[1] = UDS_{{profile.name}}_GetProperty_PropertyId & 0xFF;
+            payload[2] = UDS_PROPERTY_GET_RETURN_NO_REQUEST;
+            *size = 3;
+            return true;
+        }
+    }
+    // should never reach here
+    return false;
 }
 
-void UDS_OnServiceCall(uint16_t service_id, uint8_t size, uint8_t* data) {
+////////////////////////////////////////////////////////////////
 
+static bool UDS_{{profile.name}}_SetProperty_RequestReceived = false;
+static bool UDS_{{profile.name}}_SetProperty_ResponseSet = false;
+static uint16_t UDS_{{profile.name}}_SetProperty_PropertyId = UDS_PROPERTY_ID_RESERVED;
+static uint8_t UDS_{{profile.name}}_SetProperty_Status = UDS_PROPERTY_SET_RETURN_NO_REQUEST;
+
+static void UDS_{{profile.name}}_EnqueueSetPropertyResponse(uint16_t property_id, uint8_t status) {
+    UDS_{{profile.name}}_SetProperty_PropertyId = property_id;
+    UDS_{{profile.name}}_SetProperty_Status = status;
+    UDS_{{profile.name}}_SetProperty_ResponseSet = true;
 }
 
-static void _UDS_AppEmptyHandler(void) {
+static void UDS_{{profile.name}}_ResetSetPropertyResponse() {
+    UDS_{{profile.name}}_SetProperty_ResponseSet = false;
+    UDS_{{profile.name}}_SetProperty_PropertyId = UDS_PROPERTY_ID_RESERVED;
+    UDS_{{profile.name}}_SetProperty_Status = UDS_PROPERTY_SET_RETURN_NO_REQUEST;
+}
+
+static void _UDS_{{profile.name}}_AppEmptyHandler(void) {
     // do nothing
 }
 
 {% for property in profile.properties -%}
-void UDS_App_OnPropertyChange_{{property.prop_name}}(void) __attribute__((weak, alias("_UDS_AppEmptyHandler")));
+void UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}(void) __attribute__((weak, alias("_UDS_{{profile.name}}_AppEmptyHandler")));
 {% endfor %}
+
+void UDS_{{profile.name}}_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data) {
+    switch(property_id) {
+        {% for property in profile.properties %}
+        case UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID: {
+            if (size != sizeof({{property.get_ctype()}})) {
+                UDS_{{profile.name}}_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_WRITE_FAILURE);
+                break;
+            }
+            {{property.get_ctype()}} value = *(({{property.get_ctype()}}*)data);
+            UDS_Properties_{{profile.name}}.{{property.prop_name}} = value;
+            UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}();
+            UDS_{{profile.name}}_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_SUCCESS);
+            break;
+        }
+        {% endfor %}
+        default:
+            // enqueue no such property error
+            UDS_{{profile.name}}_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_NO_SUCH_PROPERTY);
+            break;
+    }
+}
+
+void UDS_{{profile.name}}_LINE_SetCallHandler(uint16_t request, uint8_t size, uint8_t* payload) {
+    UDS_{{profile.name}}_SetProperty_RequestReceived = true;
+    if (size >= 3) {
+        uint16_t property_id = (((uint16_t)payload[0]) << 8) | payload[1];
+        UDS_{{profile.name}}_SetProperty_PropertyId = property_id;
+        UDS_{{profile.name}}_OnSetProperty(property_id, size - 2, payload + 2);
+    }
+    else {
+        UDS_{{profile.name}}_EnqueueSetPropertyResponse(UDS_PROPERTY_ID_RESERVED, UDS_PROPERTY_SET_RETURN_BAD_REQUEST);
+    }
+}
+
+bool UDS_{{profile.name}}_LINE_SetReturnHandler(uint16_t request, uint8_t* size, uint8_t* payload) {
+    if (UDS_{{profile.name}}_SetProperty_ResponseSet) {
+        payload[0] = (UDS_{{profile.name}}_SetProperty_PropertyId >> 8) & 0xFF | 0x80;
+        payload[1] = UDS_{{profile.name}}_SetProperty_PropertyId & 0xFF;
+        payload[2] = UDS_{{profile.name}}_SetProperty_Status;
+        *size = 3;
+
+        UDS_{{profile.name}}_SetProperty_RequestReceived = false;
+        UDS_{{profile.name}}_ResetSetPropertyResponse();
+        return true;
+    }
+    else {
+        if (UDS_{{profile.name}}_SetProperty_RequestReceived) {
+            payload[0] = (UDS_{{profile.name}}_SetProperty_PropertyId >> 8) & 0xFF | 0x80;
+            payload[1] = UDS_{{profile.name}}_SetProperty_PropertyId & 0xFF;
+            payload[2] = UDS_PROPERTY_SET_RETURN_NOT_READY;
+            *size = 3;
+            return true;
+        }
+        else {
+            payload[0] = (UDS_{{profile.name}}_SetProperty_PropertyId >> 8) & 0xFF | 0x80;
+            payload[1] = UDS_{{profile.name}}_SetProperty_PropertyId & 0xFF;
+            payload[2] = UDS_PROPERTY_SET_RETURN_NO_REQUEST;
+            *size = 3;
+            return true;
+        }
+    }
+    return false;
+}
+
+{% endfor %}
+
+void UDS_Init(void) {
+{% for profile in config.profiles %}
+    UDS_ResetProperties_{{profile.name}}();
+
+    LINE_Diag_RegisterUnicastListener({{profile.channel}}, UDS_PROPERTY_GET_CALL_REQUEST_ID, UDS_LINE_{{profile.name}}_GetCallHandler);
+    LINE_Diag_RegisterUnicastPublisher({{profile.channel}}, UDS_PROPERTY_GET_RETURN_REQUEST_ID, UDS_LINE_{{profile.name}}_GetReturnHandler);
+
+    LINE_Diag_RegisterUnicastListener({{profile.channel}}, UDS_PROPERTY_SET_CALL_REQUEST_ID, UDS_{{profile.name}}_LINE_SetCallHandler);
+    LINE_Diag_RegisterUnicastPublisher({{profile.channel}}, UDS_PROPERTY_SET_RETURN_REQUEST_ID, UDS_{{profile.name}}_LINE_SetReturnHandler);
+{% endfor %}
+}

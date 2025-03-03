@@ -4,31 +4,51 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+void UDS_Init(void);
+
+{% for profile in config.profiles %}
 {% for property in profile.properties -%}
-#define UDS_APP_PROPERTY_{{property.prop_name}}_ID {{property.prop_id}}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID {{property.prop_id}}
 {% endfor %}
 {% for property in profile.properties -%}
-void UDS_App_OnPropertyChange_{{property.prop_name}}(void);
-{% endfor %}
-
-{% for property in profile.properties -%}
-{%- if "UdsNumericProperty" in property.__class__.__name__ %}
-
-{%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
-
-{%- elif "UdsEnumProperty" in property.__class__.__name__ %}
-{% for value in property.values -%}
-#define UDS_APP_PROPERTY_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
-{% endfor %}
-{% endif %}
+void UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}(void);
 {% endfor %}
 
 typedef struct {
     {% for property in profile.properties %}
     {{property.get_ctype()}} {{property.prop_name}};
     {% endfor %}
-} UDS_AppContainer_t;
+} UDS_Properties_{{profile.name}}_t;
 
-extern UDS_AppContainer_t UDS_AppContainer;
+extern UDS_Properties_{{profile.name}}_t UDS_Properties_{{profile.name}};
+
+{% for property in profile.properties -%}
+{%- if "UdsNumericProperty" in property.__class__.__name__ %}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MIN {{property.min}}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MAX {{property.max}}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_DEFAULT {{property.default_value}}
+
+static bool UDS_App_IsPropertyValid_{{profile.name}}_{{property.prop_name}}() {
+    return UDS_Properties_{{profile.name}}.{{property.prop_name}} >= UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MIN &&
+           UDS_Properties_{{profile.name}}.{{property.prop_name}} <= UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MAX;
+}
+static {{property.get_ctype()}} UDS_App_GetValidProperty_{{profile.name}}_{{property.prop_name}}() {
+    if(UDS_App_IsPropertyValid_{{profile.name}}_{{property.prop_name}}()) {
+        return UDS_Properties_{{profile.name}}.{{property.prop_name}};
+    }
+    return UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_DEFAULT;
+}
+{%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_DEFAULT {{"true" if property.default_value else "false"}}
+{%- elif "UdsEnumProperty" in property.__class__.__name__ %}
+{% for value in property.values -%}
+#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+// Reset all properties to their default values
+void UDS_ResetProperties_{{profile.name}}(void);
+{% endfor %}
 
 #endif

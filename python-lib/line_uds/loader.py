@@ -14,10 +14,20 @@ def load_profile(profile):
         for (name, prop) in data['properties'].items():
             if prop['type'] in ['uint8', 'uint16', 'uint32', 'uint64']:
                 byte_size = int(prop['type'][4:]) // 8
-                properties.append(UdsNumericProperty(name, int(prop['id'], 0), byte_size, False, prop['default'] if 'default' in prop else 0))
+                numeric_prop = UdsNumericProperty(name, int(prop['id'], 0), byte_size, False, prop['default'] if 'default' in prop else 0)
+                if 'min' in prop:
+                    numeric_prop.min = prop['min']
+                if 'max' in prop:
+                    numeric_prop.max = prop['max']
+                properties.append(numeric_prop)
             if prop['type'] in ['int8', 'int16', 'int32', 'int64']:
                 byte_size = int(prop['type'][3:]) // 8
-                properties.append(UdsNumericProperty(name, int(prop['id'], 0), byte_size, True, prop['default'] if 'default' in prop else 0))
+                numeric_prop = UdsNumericProperty(name, int(prop['id'], 0), byte_size, True, prop['default'] if 'default' in prop else 0)
+                if 'min' in prop:
+                    numeric_prop.min = prop['min']
+                if 'max' in prop:
+                    numeric_prop.max = prop['max']
+                properties.append(numeric_prop)
             elif prop['type'] == 'bool':
                 properties.append(UdsBooleanProperty(name, int(prop['id'], 0), prop['default'] if 'default' in prop else False))
             elif prop['type'] == 'enum':
