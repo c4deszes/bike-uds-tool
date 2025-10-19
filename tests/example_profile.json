@@ -1,6 +1,58 @@
 {
     "services": {
-        
+        "VoidNoParams": {
+            "id": "0x1000",
+            "params": [],
+            "return": "void"
+        },
+        "VoidWithParams": {
+            "id": "0x1001",
+            "params": [
+                {
+                    "name": "param1",
+                    "type": "uint8_t"
+                },
+                {
+                    "name": "param2",
+                    "type": "uint16_t"
+                }
+            ],
+            "return": "void"
+        },
+        "BooleanWithParams": {
+            "id": "0x1002",
+            "params": [
+                {
+                    "name": "param1",
+                    "type": "uint8_t"
+                },
+                {
+                    "name": "param2",
+                    "type": "uint16_t"
+                }
+            ],
+            "return": "bool"
+        },
+        "IntegerNoParams": {
+            "id": "0x1003",
+            "params": [],
+            "return": "uint32_t"
+        },
+        "IntegerWithParams": {
+            "id": "0x1004",
+            "params": [
+                {
+                    "name": "param1",
+                    "type": "uint32_t"
+                },
+                {
+                    "name": "param2",
+                    "type": "uint32_t"
+                }
+            ],
+            "return": "uint32_t"
+        }
+
     },
     "properties": {
         "BooleanProperty": {
@@ -9,19 +61,19 @@
         },
         "Integer8Property": {
             "id": "0x4001",
-            "type": "uint8",
+            "type": "uint8_t",
             "min": 0,
             "max": 400
         },
         "Integer16Property": {
             "id": "0x4002",
-            "type": "uint16",
+            "type": "uint16_t",
             "min": 0,
             "max": 400
         },
         "Integer32Property": {
             "id": "0x4003",
-            "type": "uint32",
+            "type": "uint32_t",
             "min": 0,
             "max": 400
         }

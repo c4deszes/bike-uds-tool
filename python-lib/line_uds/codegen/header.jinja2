@@ -49,6 +49,32 @@ static {{property.get_ctype()}} UDS_App_GetValidProperty_{{profile.name}}_{{prop
 
 // Reset all properties to their default values
 void UDS_ResetProperties_{{profile.name}}(void);
+
+{% for service in profile.services %}
+#define UDS_APP_SERVICE_{{profile.name}}_{{service.name}}_ID {{service.service_id}}
+
+typedef struct {
+    {%- for param in service.params %}
+    {{param.param_type}} {{param.param_name}};
+    {%- endfor %}
+} UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t;
+
+typedef struct {
+    {%- if service.return_type != 'void' %}
+    {{service.return_type}} return_value;
+    {%- endif %}
+} UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t;
+
+void UDS_App_OnServiceRequest_{{profile.name}}_{{service.name}}(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t*, UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t*);
+
+bool UDS_App_HasPendingServiceRequest_{{profile.name}}_{{service.name}}(void);
+void UDS_App_ClearPendingServiceRequest_{{profile.name}}_{{service.name}}(void);
+UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t* UDS_App_GetPendingServiceRequest_{{profile.name}}_{{service.name}}(void);
+UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t* UDS_App_GetPendingServiceResponse_{{profile.name}}_{{service.name}}(void);
+void UDS_App_FinishService_{{profile.name}}_{{service.name}}(uint8_t response_status);
+
+{% endfor %}
+
 {% endfor %}
 
 #endif

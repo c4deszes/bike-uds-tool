@@ -1,4 +1,14 @@
+class UdsServiceParam():
+    def __init__(self, param_name: str, param_type: str) -> None:
+        self.param_name = param_name
+        self.param_type = param_type
 
+class UdsService():
+    def __init__(self, name: str, service_id: int, params: list[UdsServiceParam], return_type: str) -> None:
+        self.name = name
+        self.service_id = service_id
+        self.params = params
+        self.return_type = return_type
 
 class UdsProperty():
 
@@ -85,3 +95,9 @@ class UdsProfile():
             if prop.prop_name == prop_name or prop.prop_id == prop_name:
                 return prop
         raise LookupError(f"Property {prop_name} not found")
+
+    def get_service(self, service_name) -> UdsService:
+        for service in self.services:
+            if service.service_name == service_name or service.service_id == service_name:
+                return service
+        raise LookupError(f"Service {service_name} not found")
