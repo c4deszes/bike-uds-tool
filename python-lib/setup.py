@@ -12,7 +12,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/c4deszes/bike-uds-tool",
     packages=find_packages(),
-    package_data={},
+    package_data={'': ['*.jinja2']},
     include_package_data=True,
     license='MIT',
     keywords=['LINE', 'UDS', 'Diagnostics'],
