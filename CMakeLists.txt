@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(
     line-uds
-    VERSION "0.1.0"
+    VERSION "0.2.1"
     LANGUAGES C CXX)
 
 option(UDS_LINE_BUILD_TESTS "Enables library test cases" OFF)
