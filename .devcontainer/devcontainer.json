@@ -1,0 +1,52 @@
+{
+    "name": "LINE Protocol Dev Environment",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "."
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/python:1": {
+            "version": "3.14"
+        },
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "upgradePackages": true
+        }
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "njpwerner.autodocstring",
+                "trond-snekvik.simple-rst",
+                "lextudio.restructuredtext",
+                "github.vscode-github-actions"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": true,
+                "python.formatting.provider": "none",
+                "python.testing.pytestEnabled": true,
+                "python.testing.cwd": "${workspaceFolder}/python-lib",
+                "autoDocstring.docstringFormat": "sphinx",
+                "cmake.configureOnOpen": true,
+                "cmake.options.statusBarVisibility": "visible"
+            }
+        }
+    },
+    "postCreateCommand": "bash .devcontainer/setup.sh",
+    "runArgs": [
+        // "--device=/dev/ttyUSB0:/dev/ttyUSB0",
+        // "--device=/dev/ttyUSB1:/dev/ttyUSB1",
+        // "--device=/dev/ttyUSB2:/dev/ttyUSB2",
+        // "--device=/dev/ttyUSB3:/dev/ttyUSB3"
+    ],
+    "remoteUser": "root"
+}

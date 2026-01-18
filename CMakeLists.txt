@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/library.properties" LIBRARY_PROPERTIES_CONTENT)
+string(REGEX MATCH "version=([^\n\r]+)" _ ${LIBRARY_PROPERTIES_CONTENT})
+set(LIBRARY_VERSION "${CMAKE_MATCH_1}")
+
 project(
     line-uds
-    VERSION "0.3.0"
+    VERSION ${LIBRARY_VERSION}
     LANGUAGES C CXX)
 
 ################################################################################
@@ -20,7 +24,7 @@ CPMAddPackage("gh:c4deszes/bike-line-protocol@0.3.0")
 find_package(Python REQUIRED)
 
 ################################################################################
-# Interface
+# Sources
 ################################################################################
 add_library(line-uds-api INTERFACE)
 target_include_directories(line-uds-api INTERFACE
@@ -28,6 +32,9 @@ target_include_directories(line-uds-api INTERFACE
 )
 target_link_libraries(line-uds-api INTERFACE line-protocol-api)
 
+################################################################################
+# Functions
+################################################################################
 function(uds_codegen)
 
 cmake_parse_arguments(

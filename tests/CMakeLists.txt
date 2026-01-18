@@ -20,11 +20,44 @@ function(add_test TARGET)
     gtest_discover_tests(${TARGET} DISCOVERY_MODE POST_BUILD)
 endfunction()
 
-add_custom_target(
-    coverage
-    COMMAND ${Python_EXECUTABLE} -m gcovr --html-self-contained --html-details ${CMAKE_BINARY_DIR}/coverage.html
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+################################################################################
+# Coverage
+################################################################################
+add_custom_target(coverage_report
+    COMMAND ${CMAKE_COMMAND} -E echo "Generating coverage report..."
+    COMMAND ${CMAKE_COMMAND} -E make_directory coverage
+    COMMAND gcovr -r ${CMAKE_SOURCE_DIR} --cobertura coverage/coverage.xml
+                                         --html coverage/coverage.html
+                                         --html-details coverage/coverage_details.html
 )
+
+################################################################################
+# Test targets
+################################################################################
+
+## Property retrival
+# add_executable(test_UdsLine_GetProperties EXCLUDE_FROM_ALL)
+# target_sources(test_UdsLine_GetProperties PRIVATE
+#     test_UdsLine_GetProperties.cpp
+# )
+# target_link_libraries(test_UdsLine_GetProperties PRIVATE
+#     line-uds-api line-uds-sources 
+#     line-protocol-api line-protocol-sources
+#     line-protocol-adapter-sources
+# )
+# add_test(test_UdsLine_GetProperties)
+
+# ## Property setting
+# add_executable(test_UdsLine_SetProperties EXCLUDE_FROM_ALL)
+# target_sources(test_UdsLine_SetProperties PRIVATE
+#     test_UdsLine_SetProperties.cpp
+# )
+# target_link_libraries(test_UdsLine_SetProperties PRIVATE
+#     line-uds-api line-uds-sources 
+#     line-protocol-api line-protocol-sources
+#     line-protocol-adapter-sources
+# )
+# add_test(test_UdsLine_SetProperties)
 
 ## Generated code testing
 uds_codegen(

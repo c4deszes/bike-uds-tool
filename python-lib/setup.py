@@ -1,10 +1,18 @@
 from setuptools import setup, find_packages
+import os
+
+with open(os.path.join(os.path.dirname(__file__), "..", "library.properties"), "r") as f:
+    version_str = "0.0.0"  # Default version in case of failure to read
+    for line in f:
+        if line.startswith("version="):
+            version_str = line.strip().split("=", 1)[1]
+            break
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 setup(
     name='line-uds',
-    version='0.1.0',
+    version=version_str,
     author="Balazs Eszes",
     author_email="c4deszes@gmail.com",
     description="Diagnostic extension for LINE devices",
@@ -12,11 +20,12 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/c4deszes/bike-uds-tool",
     packages=find_packages(),
-    package_data={},
+    package_data={'': ['*.jinja2']},
+    include_package_data=True,
     license='MIT',
     keywords=['LINE', 'UDS', 'Diagnostics'],
     install_requires=[
-        'line-protocol'
+        #'line-protocol'
     ],
     extras_require={
         'dev': [
