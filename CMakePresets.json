@@ -37,7 +37,7 @@
             "name": "build-cov-targets",
             "hidden": true,
             "targets": [
-                "coverage"
+                "coverage_report"
             ]
         },
         {
