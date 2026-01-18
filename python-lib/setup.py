@@ -25,7 +25,7 @@ setup(
     license='MIT',
     keywords=['LINE', 'UDS', 'Diagnostics'],
     install_requires=[
-        'line-protocol'
+        #'line-protocol'
     ],
     extras_require={
         'dev': [

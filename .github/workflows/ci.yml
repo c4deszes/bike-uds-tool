@@ -12,6 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Checkout (line-protocol)
+        uses: actions/checkout@v6
+        with:
+          repository: c4deszes/bike-line-protocol
+          path: line-protocol
+
+      - name: Setup line-protocol
+        working-directory: line-protocol/python-lib
+        run: python -m pip install -e .[dev]
+
       - name: Setup Python library
         working-directory: python-lib
         run: python -m pip install -e .[dev]
@@ -46,6 +56,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Checkout (line-protocol)
+        uses: actions/checkout@v6
+        with:
+          repository: c4deszes/bike-line-protocol
+          path: line-protocol
+
+      - name: Setup line-protocol
+        working-directory: line-protocol/python-lib
+        run: python -m pip install -e .[dev]
+
       - name: Setup Python library
         working-directory: python-lib
         run: python -m pip install -e .[dev]
@@ -79,6 +99,16 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Checkout (line-protocol)
+        uses: actions/checkout@v6
+        with:
+          repository: c4deszes/bike-line-protocol
+          path: line-protocol
+
+      - name: Setup line-protocol
+        working-directory: line-protocol/python-lib
+        run: python -m pip install -e .[dev]
 
       - name: Setup Python library
         working-directory: python-lib
