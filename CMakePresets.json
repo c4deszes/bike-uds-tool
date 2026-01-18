@@ -1,5 +1,5 @@
 {
-    "version": 2,
+    "version": 6,
     "cmakeMinimumRequired": {
         "major": 3,
         "minor": 20,
@@ -7,19 +7,21 @@
     },
     "configurePresets": [
         {
-            "name": "mingw-default",
+            "name": "conf-mingw-default",
             "generator": "MinGW Makefiles",
             "binaryDir": "${sourceDir}/_build/${presetName}",
             "cacheVariables": {
-                "UDS_LINE_BUILD_TESTS": "ON"
+                "UDS_LINE_BUILD_TESTS": "ON",
+                "UDS_LINE_BUILD_DOCS": "ON"
             }
         },
         {
-            "name": "gcc-default",
+            "name": "conf-gcc-default",
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/_build/${presetName}",
             "cacheVariables": {
-                "UDS_LINE_BUILD_TESTS": "ON"
+                "UDS_LINE_BUILD_TESTS": "ON",
+                "UDS_LINE_BUILD_DOCS": "ON"
             }
         }
     ],
@@ -32,25 +34,91 @@
             ]
         },
         {
+            "name": "build-cov-targets",
+            "hidden": true,
+            "targets": [
+                "coverage_report"
+            ]
+        },
+        {
             "name": "build-docs-targets",
             "hidden": true,
             "targets": [
-                "docs"
+                "Sphinx"
             ]
         },
         {
             "name": "build-tests-gcc",
-            "configurePreset": "gcc-default",
+            "configurePreset": "conf-gcc-default",
             "inherits": "build-test-targets"
+        },
+        {
+            "name": "build-cov-gcc",
+            "configurePreset": "conf-gcc-default",
+            "inherits": "build-cov-targets"
+        },
+        {
+            "name": "build-docs-gcc",
+            "configurePreset": "conf-gcc-default",
+            "inherits": "build-docs-targets"
         }
     ],
     "testPresets": [
         {
-            "name": "test-gcc",
-            "configurePreset": "gcc-default",
+            "name": "test-all-gcc",
+            "configurePreset": "conf-gcc-default",
             "output": {
                 "outputOnFailure": true
             }
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "workflow-build",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "conf-gcc-default"
+                },
+                {
+                    "type": "build",
+                    "name": "build-tests-gcc"
+                }
+            ]
+        },
+        {
+            "name": "workflow-test",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "conf-gcc-default"
+                },
+                {
+                    "type": "build",
+                    "name": "build-tests-gcc"
+                },
+                {
+                    "type": "test",
+                    "name": "test-all-gcc"
+                },
+                {
+                    "type": "build",
+                    "name": "build-cov-gcc"
+                }
+            ]
+        },
+        {
+            "name": "workflow-docs",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "conf-gcc-default"
+                },
+                {
+                    "type": "build",
+                    "name": "build-docs-gcc"
+                }
+            ]
         }
     ]
 }

@@ -1,22 +1,36 @@
 cmake_minimum_required(VERSION 3.20)
+
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/library.properties" LIBRARY_PROPERTIES_CONTENT)
+string(REGEX MATCH "version=([^\n\r]+)" _ ${LIBRARY_PROPERTIES_CONTENT})
+set(LIBRARY_VERSION "${CMAKE_MATCH_1}")
+
 project(
     line-uds
-    VERSION "0.1.0"
+    VERSION ${LIBRARY_VERSION}
     LANGUAGES C CXX)
 
+################################################################################
+# Options
+################################################################################
 option(UDS_LINE_BUILD_TESTS "Enables library test cases" OFF)
 
 include(tools/cmake/CPM.cmake)
-CPMAddPackage("gh:c4deszes/bike-line-protocol@0.2.0")
+CPMAddPackage("gh:c4deszes/bike-line-protocol@0.3.0")
 
 find_package(Python REQUIRED)
 
+################################################################################
+# Sources
+################################################################################
 add_library(line-uds-api INTERFACE)
 target_include_directories(line-uds-api INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_link_libraries(line-uds-api INTERFACE line-protocol-api)
 
+################################################################################
+# Functions
+################################################################################
 function(uds_codegen)
 
 cmake_parse_arguments(
@@ -42,6 +56,9 @@ cmake_parse_arguments(
     add_dependencies(${_TARGET} uds-codegen-${_TARGET})
 endfunction()
 
+################################################################################
+# Testing
+################################################################################
 if(UDS_LINE_BUILD_TESTS)
     enable_testing()
     include(FetchContent)
@@ -60,16 +77,11 @@ if(UDS_LINE_BUILD_TESTS)
 
     FetchContent_MakeAvailable(googletest fff)
     add_subdirectory(tests)
+endif()
 
-    add_custom_target(
-        coverage
-        COMMAND ${Python_EXECUTABLE} -m gcovr --html-self-contained --html-details ${CMAKE_BINARY_DIR}/coverage.html
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-
-    add_custom_target(
-        docs
-        COMMAND ${Python_EXECUTABLE} -m sphinx -b html -E ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+################################################################################
+# Documentation
+################################################################################
+if(UDS_LINE_BUILD_DOCS)
+    add_subdirectory(docs)
 endif()
