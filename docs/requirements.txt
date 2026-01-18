@@ -1,0 +1,14 @@
+# Documentation requirements
+Sphinx==8.*
+sphinx-rtd-theme==3.0.*
+jupyter-sphinx==0.5.*
+matplotlib==3.10.*
+
+UliEngineering==1.1.2
+scipy==1.*                 # scipy is a hidden dependency of UliEngineering
+
+sphinxcontrib-kroki==1.3.*
+setuptools>=80             # setuptools is a hidden dependency of sphinxcontrib-kroki,
+                           # not present in Python 3.14
+
+breathe==4.*

@@ -4,6 +4,21 @@ function(add_test TARGET)
     gtest_discover_tests(${TARGET} DISCOVERY_MODE POST_BUILD)
 endfunction()
 
+################################################################################
+# Coverage
+################################################################################
+add_custom_target(coverage_report
+    COMMAND ${CMAKE_COMMAND} -E echo "Generating coverage report..."
+    COMMAND ${CMAKE_COMMAND} -E make_directory coverage
+    COMMAND gcovr -r ${CMAKE_SOURCE_DIR} --cobertura coverage/coverage.xml
+                                         --html coverage/coverage.html
+                                         --html-details coverage/coverage_details.html
+)
+
+################################################################################
+# Test targets
+################################################################################
+
 ## Property retrival
 # add_executable(test_UdsLine_GetProperties EXCLUDE_FROM_ALL)
 # target_sources(test_UdsLine_GetProperties PRIVATE
