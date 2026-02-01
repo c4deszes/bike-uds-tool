@@ -1,5 +1,5 @@
 {
-    "name": "LINE Protocol Dev Environment",
+    "name": "UDS Dev Environment",
     "build": {
         "dockerfile": "Dockerfile",
         "context": "."
@@ -37,7 +37,10 @@
                 "python.testing.cwd": "${workspaceFolder}/python-lib",
                 "autoDocstring.docstringFormat": "sphinx",
                 "cmake.configureOnOpen": true,
-                "cmake.options.statusBarVisibility": "visible"
+                "cmake.options.statusBarVisibility": "visible",
+                "cmake.coverageInfoFiles": [
+                    "${workspaceFolder}/_build/conf-gcc-default/tests/coverage/coverage.info"
+                ]
             }
         }
     },

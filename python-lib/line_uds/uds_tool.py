@@ -62,8 +62,15 @@ class UdsSetPropertyEvent():
         self.event = event
         self.exception = None
 
+class UdsPropertyStatus:
+    _name: str      # Property name cached
+    buffer: bytearray
+    value: any
+
+
 @dataclass
 class UdsNodeStatus():
+    _name: str      # Node name cached
     profile: UdsProfile
     properties: Dict[int, bytearray]
     # TODO: not just the data but also response status for set and get in case of errors

@@ -88,7 +88,7 @@ class UdsProfile():
         self.name = None
         self.channel: int = None
         self.services = []
-        self.properties = []
+        self.properties: list[UdsProperty] = []
 
     def get_property(self, prop_name) -> UdsProperty:
         for prop in self.properties:
