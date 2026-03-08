@@ -7,6 +7,9 @@ from queue import Queue, Empty
 from threading import Thread, Event
 from dataclasses import dataclass
 
+from line_uds.profile import UdsProperty
+from line_protocol.network.nodes import NodeRef
+
 class UdsSetPropertyException(Exception):
 
     def __init__(self, *args: object) -> None:
@@ -62,18 +65,23 @@ class UdsSetPropertyEvent():
         self.event = event
         self.exception = None
 
-class UdsPropertyStatus:
-    _name: str      # Property name cached
+@dataclass
+class UdsPropertyValue:
     buffer: bytearray
     value: any
 
+class UdsPropertyStatus:
+
+    def __init__(self, prop: UdsProperty, data: UdsPropertyValue):
+        self.prop = prop
+        self.data = data
+        self.exception: Exception | None = None
 
 @dataclass
 class UdsNodeStatus():
-    _name: str      # Node name cached
+    _ref: NodeRef
     profile: UdsProfile
-    properties: Dict[int, bytearray]
-    # TODO: not just the data but also response status for set and get in case of errors
+    properties: Dict[int, UdsPropertyStatus]
 
 class UdsTool():
 
@@ -83,13 +91,22 @@ class UdsTool():
         self._event_id = 0
         self._running = False
 
-        self.nodes = {x: UdsNodeStatus(None, {}) for x in range(16)}
+        self.nodes = {x: UdsNodeStatus(NodeRef(x, None), None, {}) for x in range(1, 15)}
 
     def load_profile(self, node: Union[int, str], profile: Union[str, UdsProfile]):
-        profile = load_profile(profile)
+        if isinstance(profile, str):
+            profile = load_profile(profile)
         if isinstance(node, str):
+            if self._master.network is None:
+                raise ValueError("Master device has no network configured, cannot resolve node name")
             node = self._master.network.get_node(node).address
+
         self.nodes[node].profile = profile
+        for prop in profile.properties:
+            # TODO: initialize default values for properties
+            self.nodes[node].properties[prop.prop_id] = UdsPropertyStatus(prop, UdsPropertyValue(None, None))
+
+        return profile
 
     def __enter__(self):
         self._running = True
@@ -124,6 +141,13 @@ class UdsTool():
             return True
         else:
             event.response = response[2:]
+
+            if event.prop.prop_id in self.nodes[event.prop.address].properties:
+                property_status = self.nodes[event.prop.address].properties[event.prop.prop_id]
+                property_status.data.buffer = bytearray(event.response)
+                if property_status.prop is not None:
+                    property_status.data.value = property_status.prop.decode(property_status.data.buffer)
+
             return True
         
     def _process_setevent(self, response, event: UdsSetPropertyEvent) -> bool:
@@ -132,6 +156,13 @@ class UdsTool():
             event.exception = UdsSetPropertyException("Invalid response length")
             return True
         if response[2] == UDS_PROPERTY_SET_RETURN_SUCCESS:
+
+            if event.prop.prop_id in self.nodes[event.prop.address].properties:
+                property_status = self.nodes[event.prop.address].properties[event.prop.prop_id]
+                property_status.data.buffer = bytearray(event.prop.value)
+                if property_status.prop is not None:
+                    property_status.data.value = property_status.prop.decode(property_status.data.buffer)
+
             return True
         elif response[2] == UDS_PROPERTY_SET_RETURN_NOT_READY:
             return False
@@ -168,8 +199,7 @@ class UdsTool():
                                 event.event.set()
                                 break
                         if timeout <= 0:
-                            event.exception = UdsGetPropertyException("Timeout")
-                            event.event.set()
+                            raise UdsGetPropertyException("Timeout")
                     except Exception as e:
                         event.exception = e
                         event.event.set()
@@ -192,8 +222,7 @@ class UdsTool():
                                 event.event.set()
                                 break
                         if timeout <= 0:
-                            event.exception = UdsSetPropertyException("Timeout")
-                            event.event.set()
+                            raise UdsSetPropertyException("Timeout")
                     except Exception as e:
                         event.exception = e
                         event.event.set()
@@ -238,6 +267,6 @@ class UdsTool():
             address = self._master.network.get_node(address).address
         if isinstance(prop_id, str):
             prop_id = self.nodes[address].profile.get_property(prop_id).prop_id
-        # TODO: encode value
+
         prop_value = self.nodes[address].profile.get_property(prop_id).encode(value)
         return self.set_property_raw(address, prop_id, prop_value, delay, wait, timeout)
