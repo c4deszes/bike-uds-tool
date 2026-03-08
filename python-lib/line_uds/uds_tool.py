@@ -83,6 +83,11 @@ class UdsNodeStatus():
     profile: UdsProfile
     properties: Dict[int, UdsPropertyStatus]
 
+class UdsNodeStatusListener():
+
+    def on_property_change(self, node_status: UdsNodeStatus, prop_id: Union[int, UdsProperty], value: UdsPropertyValue):
+        pass
+
 class UdsTool():
 
     def __init__(self, master: 'LineMaster'):
@@ -91,7 +96,9 @@ class UdsTool():
         self._event_id = 0
         self._running = False
 
-        self.nodes = {x: UdsNodeStatus(NodeRef(x, None), None, {}) for x in range(1, 15)}
+        self._listeners: List[UdsNodeStatusListener] = []
+
+        self._node_status = {x: UdsNodeStatus(NodeRef(x, None), None, {}) for x in range(1, 15)}
 
     def load_profile(self, node: Union[int, str], profile: Union[str, UdsProfile]):
         if isinstance(profile, str):
@@ -101,10 +108,10 @@ class UdsTool():
                 raise ValueError("Master device has no network configured, cannot resolve node name")
             node = self._master.network.get_node(node).address
 
-        self.nodes[node].profile = profile
+        self._node_status[node].profile = profile
         for prop in profile.properties:
             # TODO: initialize default values for properties
-            self.nodes[node].properties[prop.prop_id] = UdsPropertyStatus(prop, UdsPropertyValue(None, None))
+            self._node_status[node].properties[prop.prop_id] = UdsPropertyStatus(prop, UdsPropertyValue(None, None))
 
         return profile
 
@@ -142,11 +149,13 @@ class UdsTool():
         else:
             event.response = response[2:]
 
-            if event.prop.prop_id in self.nodes[event.prop.address].properties:
-                property_status = self.nodes[event.prop.address].properties[event.prop.prop_id]
+            if event.prop.prop_id in self._node_status[event.prop.address].properties:
+                property_status = self._node_status[event.prop.address].properties[event.prop.prop_id]
                 property_status.data.buffer = bytearray(event.response)
                 if property_status.prop is not None:
                     property_status.data.value = property_status.prop.decode(property_status.data.buffer)
+                for listener in self._listeners:
+                    listener.on_property_change(self._node_status[event.prop.address], event.prop.prop_id, property_status.data)
 
             return True
         
@@ -157,11 +166,14 @@ class UdsTool():
             return True
         if response[2] == UDS_PROPERTY_SET_RETURN_SUCCESS:
 
-            if event.prop.prop_id in self.nodes[event.prop.address].properties:
-                property_status = self.nodes[event.prop.address].properties[event.prop.prop_id]
+            if event.prop.prop_id in self._node_status[event.prop.address].properties:
+                property_status = self._node_status[event.prop.address].properties[event.prop.prop_id]
                 property_status.data.buffer = bytearray(event.prop.value)
                 if property_status.prop is not None:
                     property_status.data.value = property_status.prop.decode(property_status.data.buffer)
+
+                for listener in self._listeners:
+                    listener.on_property_change(self._node_status[event.prop.address], event.prop.prop_id, property_status.data)
 
             return True
         elif response[2] == UDS_PROPERTY_SET_RETURN_NOT_READY:
@@ -257,7 +269,7 @@ class UdsTool():
         if isinstance(address, str):
             address = self._master.network.get_node(address)
         if isinstance(prop_id, str):
-            prop_id = self.nodes[address].profile.get_property(prop_id).prop_id
+            prop_id = self._node_status[address].profile.get_property(prop_id).prop_id
         # TODO: decode value
         return self.get_property_raw(address, prop_id, delay, wait, timeout)
     
@@ -266,7 +278,7 @@ class UdsTool():
         if isinstance(address, str):
             address = self._master.network.get_node(address).address
         if isinstance(prop_id, str):
-            prop_id = self.nodes[address].profile.get_property(prop_id).prop_id
+            prop_id = self._node_status[address].profile.get_property(prop_id).prop_id
 
-        prop_value = self.nodes[address].profile.get_property(prop_id).encode(value)
+        prop_value = self._node_status[address].profile.get_property(prop_id).encode(value)
         return self.set_property_raw(address, prop_id, prop_value, delay, wait, timeout)
