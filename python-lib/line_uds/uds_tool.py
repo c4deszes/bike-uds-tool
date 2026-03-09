@@ -8,7 +8,7 @@ from threading import Thread, Event
 from dataclasses import dataclass
 
 from line_uds.profile import UdsProperty
-from line_protocol.network.nodes import NodeRef
+from line_protocol.network.nodes import Node, NodeRef
 
 class UdsSetPropertyException(Exception):
 
@@ -79,41 +79,39 @@ class UdsPropertyStatus:
 
 @dataclass
 class UdsNodeStatus():
-    _ref: NodeRef
+    _node: Node
     profile: UdsProfile
     properties: Dict[int, UdsPropertyStatus]
 
 class UdsNodeStatusListener():
 
-    def on_property_change(self, node_status: UdsNodeStatus, prop_id: Union[int, UdsProperty], value: UdsPropertyValue):
+    def on_property_change(self, node: Node, prop: UdsProperty, value: UdsPropertyValue):
         pass
 
 class UdsTool():
 
     def __init__(self, master: 'LineMaster'):
         self._master = master
-        self._queue = Queue(100)
+        self._queue = Queue[Union[UdsGetPropertyEvent, UdsSetPropertyEvent]](100)
         self._event_id = 0
         self._running = False
 
         self._listeners: List[UdsNodeStatusListener] = []
+        self._nodes: Dict[int, UdsNodeStatus] = {}
 
-        self._node_status = {x: UdsNodeStatus(NodeRef(x, None), None, {}) for x in range(1, 15)}
-
-    def load_profile(self, node: Union[int, str], profile: Union[str, UdsProfile]):
+    def load_profile(self, node: Node, profile: Union[str, UdsProfile]):
         if isinstance(profile, str):
             profile = load_profile(profile)
-        if isinstance(node, str):
-            if self._master.network is None:
-                raise ValueError("Master device has no network configured, cannot resolve node name")
-            node = self._master.network.get_node(node).address
 
-        self._node_status[node].profile = profile
+        self._nodes[node.address] = UdsNodeStatus(node, profile, {})
         for prop in profile.properties:
             # TODO: initialize default values for properties
-            self._node_status[node].properties[prop.prop_id] = UdsPropertyStatus(prop, UdsPropertyValue(None, None))
+            self._nodes[node.address].properties[prop.prop_id] = UdsPropertyStatus(prop, UdsPropertyValue(None, None))
 
         return profile
+    
+    def add_listener(self, listener: UdsNodeStatusListener):
+        self._listeners.append(listener)
 
     def __enter__(self):
         self._running = True
@@ -124,6 +122,16 @@ class UdsTool():
     def __exit__(self, exc_type, exc_value, traceback):
         self._running = False
         self._thread.join()
+
+    def _update_property(self, address: int, prop_id: int, value: bytes):
+        if address in self._nodes and prop_id in self._nodes[address].properties:
+            property_status = self._nodes[address].properties[prop_id]
+            property_status.data.buffer = bytearray(value)
+            if property_status.prop is not None:
+                property_status.data.value = property_status.prop.decode(property_status.data.buffer)
+
+            for listener in self._listeners:
+                listener.on_property_change(self._nodes[address]._node, property_status.prop, property_status.data)
 
     def _process_getevent(self, response, event: UdsGetPropertyEvent) -> bool:
         # TODO: in all cases update the properties of the node
@@ -149,13 +157,7 @@ class UdsTool():
         else:
             event.response = response[2:]
 
-            if event.prop.prop_id in self._node_status[event.prop.address].properties:
-                property_status = self._node_status[event.prop.address].properties[event.prop.prop_id]
-                property_status.data.buffer = bytearray(event.response)
-                if property_status.prop is not None:
-                    property_status.data.value = property_status.prop.decode(property_status.data.buffer)
-                for listener in self._listeners:
-                    listener.on_property_change(self._node_status[event.prop.address], event.prop.prop_id, property_status.data)
+            self._update_property(event.prop.address, event.prop.prop_id, event.response)
 
             return True
         
@@ -166,14 +168,7 @@ class UdsTool():
             return True
         if response[2] == UDS_PROPERTY_SET_RETURN_SUCCESS:
 
-            if event.prop.prop_id in self._node_status[event.prop.address].properties:
-                property_status = self._node_status[event.prop.address].properties[event.prop.prop_id]
-                property_status.data.buffer = bytearray(event.prop.value)
-                if property_status.prop is not None:
-                    property_status.data.value = property_status.prop.decode(property_status.data.buffer)
-
-                for listener in self._listeners:
-                    listener.on_property_change(self._node_status[event.prop.address], event.prop.prop_id, property_status.data)
+            self._update_property(event.prop.address, event.prop.prop_id, event.prop.value)
 
             return True
         elif response[2] == UDS_PROPERTY_SET_RETURN_NOT_READY:
@@ -263,22 +258,28 @@ class UdsTool():
             event.event.wait(timeout)
             if event.exception:
                 raise event.exception
+            
+    def _find_node_by_name(self, name: str) -> Node:
+        for node in self._master.network.nodes:
+            if node.name == name:
+                return node
+        raise ValueError(f"Node with name {name} not found")
 
     def get_property(self, address: Union[int, str], prop_id: Union[int, str], delay: float = 0.05,
                      wait: bool = False, timeout: float = 1):
         if isinstance(address, str):
-            address = self._master.network.get_node(address)
+            address = self._find_node_by_name(address).address
         if isinstance(prop_id, str):
-            prop_id = self._node_status[address].profile.get_property(prop_id).prop_id
+            prop_id = self._nodes[address].profile.get_property(prop_id).prop_id
         # TODO: decode value
         return self.get_property_raw(address, prop_id, delay, wait, timeout)
     
     def set_property(self, address: Union[int, str], prop_id: Union[int, str], value, delay: float = 0.05,
                         wait: bool = False, timeout: float = 1):
         if isinstance(address, str):
-            address = self._master.network.get_node(address).address
+            address = self._find_node_by_name(address).address
         if isinstance(prop_id, str):
-            prop_id = self._node_status[address].profile.get_property(prop_id).prop_id
+            prop_id = self._nodes[address].profile.get_property(prop_id).prop_id
 
-        prop_value = self._node_status[address].profile.get_property(prop_id).encode(value)
+        prop_value = self._nodes[address].profile.get_property(prop_id).encode(value)
         return self.set_property_raw(address, prop_id, prop_value, delay, wait, timeout)
