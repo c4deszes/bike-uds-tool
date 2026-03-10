@@ -97,6 +97,15 @@ class UdsProfile():
             if prop.prop_name == prop_name or prop.prop_id == prop_name:
                 return prop
         raise LookupError(f"Property {prop_name} not found")
+    
+    def get_property_groups(self) -> list[str]:
+        groups = set()
+        for prop in self.properties:
+            groups.add(prop.group)
+        return list(groups)
+
+    def get_properties_by_group(self, group_name) -> list[UdsProperty]:
+        return [prop for prop in self.properties if prop.group == group_name]
 
     def get_service(self, service_name) -> UdsService:
         for service in self.services:
