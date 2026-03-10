@@ -12,9 +12,11 @@ class UdsService():
 
 class UdsProperty():
 
-    def __init__(self, name: str, prop_id: int) -> None:
+    def __init__(self, name: str, prop_id: int, description: str = "", group: str = "Default") -> None:
         self.prop_name = name
         self.prop_id = prop_id
+        self.description = description
+        self.group = group
 
     def encode(self, value) -> bytearray:
         raise NotImplementedError()
@@ -24,8 +26,8 @@ class UdsProperty():
 
 class UdsNumericProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, size, signed, default: int=0) -> None:
-        super().__init__(name, prop_id)
+    def __init__(self, name, prop_id, description, group, size, signed, default: int=0) -> None:
+        super().__init__(name, prop_id, description, group)
         self.size = size
         self.signed = signed
         self.default_value = default
@@ -47,8 +49,8 @@ class UdsNumericProperty(UdsProperty):
 
 class UdsBooleanProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, default=False) -> None:
-        super().__init__(name, prop_id)
+    def __init__(self, name, prop_id, description="", group="Default", default=False) -> None:
+        super().__init__(name, prop_id, description, group)
         self.default_value = default
 
     def encode(self, value: bool) -> bytearray:
@@ -66,9 +68,9 @@ class UdsBooleanProperty(UdsProperty):
 
 class UdsEnumProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, values, default=None) -> None:
-        super().__init__(name, prop_id)
-        self.values = values
+    def __init__(self, name, prop_id, description="", group="Default", values=None, default=None) -> None:
+        super().__init__(name, prop_id, description, group)
+        self.values = values if values is not None else []
         self.default_value = default
 
     def encode(self, value) -> bytearray:

@@ -45,9 +45,12 @@ def load_profile(profile):
 
         properties = []
         for (name, prop) in data['properties'].items():
+            property_id = int(prop['id'], 0)
+            description = prop['description'] if 'description' in prop else ""
+            group = prop['group'] if 'group' in prop else "Default"
             if prop['type'] in ['uint8_t', 'uint16_t', 'uint32_t', 'uint64_t']:
                 byte_size = get_int_size(prop['type']) // 8
-                numeric_prop = UdsNumericProperty(name, int(prop['id'], 0), byte_size, False, prop['default'] if 'default' in prop else 0)
+                numeric_prop = UdsNumericProperty(name, property_id, description, group, byte_size, False, prop['default'] if 'default' in prop else 0)
                 if 'min' in prop:
                     numeric_prop.min = prop['min']
                 if 'max' in prop:
@@ -55,16 +58,16 @@ def load_profile(profile):
                 properties.append(numeric_prop)
             elif prop['type'] in ['int8_t', 'int16_t', 'int32_t', 'int64_t']:
                 byte_size = get_int_size(prop['type']) // 8
-                numeric_prop = UdsNumericProperty(name, int(prop['id'], 0), byte_size, True, prop['default'] if 'default' in prop else 0)
+                numeric_prop = UdsNumericProperty(name, property_id, description, group, byte_size, True, prop['default'] if 'default' in prop else 0)
                 if 'min' in prop:
                     numeric_prop.min = prop['min']
                 if 'max' in prop:
                     numeric_prop.max = prop['max']
                 properties.append(numeric_prop)
             elif prop['type'] == 'bool':
-                properties.append(UdsBooleanProperty(name, int(prop['id'], 0), prop['default'] if 'default' in prop else False))
+                properties.append(UdsBooleanProperty(name, property_id, description, group, prop['default'] if 'default' in prop else False))
             elif prop['type'] == 'enum':
-                properties.append(UdsEnumProperty(name, int(prop['id'], 0), prop['values'], prop['default'] if 'default' in prop else None))
+                properties.append(UdsEnumProperty(name, property_id, description, group, prop['values'], prop['default'] if 'default' in prop else None))
 
             # TODO: warning for unknown property type
 
