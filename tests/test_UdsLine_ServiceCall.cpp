@@ -64,19 +64,19 @@ protected:
     }
 };
 
-FAKE_VOID_FUNC2(UDS_App_OnServiceRequest_FrontLight_VoidWithParams, 
+FAKE_VOID_FUNC2(UDS_FrontLight_VoidWithParams_OnServiceRequest, 
                 UDS_Service_FrontLight_VoidWithParams_RequestContext_t*,
                 UDS_Service_FrontLight_VoidWithParams_ResponseContext_t*);
-FAKE_VOID_FUNC2(UDS_App_OnServiceRequest_FrontLight_IntegerNoParams, 
+FAKE_VOID_FUNC2(UDS_FrontLight_IntegerNoParams_OnServiceRequest, 
                 UDS_Service_FrontLight_IntegerNoParams_RequestContext_t*,
                 UDS_Service_FrontLight_IntegerNoParams_ResponseContext_t*);
-FAKE_VOID_FUNC2(UDS_App_OnServiceRequest_FrontLight_IntegerWithParams, 
+FAKE_VOID_FUNC2(UDS_FrontLight_IntegerWithParams_OnServiceRequest, 
                 UDS_Service_FrontLight_IntegerWithParams_RequestContext_t*,
                 UDS_Service_FrontLight_IntegerWithParams_ResponseContext_t*);
-FAKE_VOID_FUNC2(UDS_App_OnServiceRequest_FrontLight_BooleanWithParams, 
+FAKE_VOID_FUNC2(UDS_FrontLight_BooleanWithParams_OnServiceRequest, 
                 UDS_Service_FrontLight_BooleanWithParams_RequestContext_t*,
                 UDS_Service_FrontLight_BooleanWithParams_ResponseContext_t*);
-FAKE_VOID_FUNC2(UDS_App_OnServiceRequest_FrontLight_VoidNoParams, 
+FAKE_VOID_FUNC2(UDS_FrontLight_VoidNoParams_OnServiceRequest, 
                 UDS_Service_FrontLight_VoidNoParams_RequestContext_t*,
                 UDS_Service_FrontLight_VoidNoParams_ResponseContext_t*);
 
@@ -104,8 +104,8 @@ TEST_F(TestUdsLineServices, Call_VoidNoParams_Invalid)
 {
     BUILD_FRAME(request,
                 UDS_SERVICE_CALL_REQUEST_ID | TEST_NODE_ADDRESS,
-                UINT16_H(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID),
-                UINT16_L(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID),
+                UINT16_H(UDS_SERVICE_FrontLight_VoidNoParams_ID),
+                UINT16_L(UDS_SERVICE_FrontLight_VoidNoParams_ID),
                 0x00);
     for (int i = 0; i < sizeof(request); i++) {
         LINE_Transport_Receive(0, request[i]);
@@ -119,8 +119,8 @@ TEST_F(TestUdsLineServices, Call_VoidNoParams_Invalid)
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg0_val, 0);
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg1_val, 3);
-    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[0], UINT16_H(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
-    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[1], UINT16_L(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
+    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[0], UINT16_H(UDS_SERVICE_FrontLight_VoidNoParams_ID));
+    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[1], UINT16_L(UDS_SERVICE_FrontLight_VoidNoParams_ID));
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[2], UDS_SERVICE_CALL_BAD_REQUEST);
 }
 
@@ -129,12 +129,12 @@ TEST_F(TestUdsLineServices, Call_VoidNoParams_Success)
     /* Service call */
     BUILD_FRAME(request,
                 UDS_SERVICE_CALL_REQUEST_ID | TEST_NODE_ADDRESS,
-                UINT16_H(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID),
-                UINT16_L(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
+                UINT16_H(UDS_SERVICE_FrontLight_VoidNoParams_ID),
+                UINT16_L(UDS_SERVICE_FrontLight_VoidNoParams_ID));
     for (int i = 0; i < sizeof(request); i++) {
         LINE_Transport_Receive(0, request[i]);
     }
-    EXPECT_EQ(UDS_App_OnServiceRequest_FrontLight_VoidNoParams_fake.call_count, 1);
+    EXPECT_EQ(UDS_FrontLight_VoidNoParams_OnServiceRequest_fake.call_count, 1);
 
     /* Response */
     BUILD_REQUEST(response_1, UDS_SERVICE_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
@@ -145,12 +145,12 @@ TEST_F(TestUdsLineServices, Call_VoidNoParams_Success)
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg0_val, 0);
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg1_val, 3);
-    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[0], UINT16_H(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
-    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[1], UINT16_L(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
+    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[0], UINT16_H(UDS_SERVICE_FrontLight_VoidNoParams_ID));
+    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[1], UINT16_L(UDS_SERVICE_FrontLight_VoidNoParams_ID));
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[2], UDS_SERVICE_CALL_NOT_READY);
 
     /* Finish service */
-    UDS_App_FinishService_FrontLight_VoidNoParams(UDS_SERVICE_CALL_SUCCESS);
+    UDS_FrontLight_VoidNoParams_FinishServiceRequest(UDS_SERVICE_CALL_SUCCESS);
 
     /* Response */
     BUILD_REQUEST(response_2, UDS_SERVICE_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
@@ -161,8 +161,8 @@ TEST_F(TestUdsLineServices, Call_VoidNoParams_Success)
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.call_count, 2);
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg0_val, 0);
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg1_val, 3);
-    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[0], UINT16_H(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
-    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[1], UINT16_L(UDS_APP_SERVICE_FrontLight_VoidNoParams_ID));
+    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[0], UINT16_H(UDS_SERVICE_FrontLight_VoidNoParams_ID));
+    EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[1], UINT16_L(UDS_SERVICE_FrontLight_VoidNoParams_ID));
     EXPECT_EQ(LINE_Transport_WriteResponse_fake.arg2_val[2], UDS_SERVICE_CALL_SUCCESS);
 }
 

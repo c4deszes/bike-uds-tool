@@ -4,55 +4,67 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-void UDS_Init(void);
+#include "uds_api.h"
 
 {% for profile in config.profiles %}
+/* Profile: {{profile.name}} */
+
+/* Property information for {{profile.name}} ******************************************************/
+
+/* UDS Property IDs */
 {% for property in profile.properties -%}
-#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID {{property.prop_id}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_ID 0x{{'%04X' % property.prop_id}}
 {% endfor %}
-{% for property in profile.properties -%}
-void UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}(void);
-{% endfor %}
 
-typedef struct {
-    {% for property in profile.properties %}
-    {{property.get_ctype()}} {{property.prop_name}};
-    {% endfor %}
-} UDS_Properties_{{profile.name}}_t;
-
-extern UDS_Properties_{{profile.name}}_t UDS_Properties_{{profile.name}};
-
-{% for property in profile.properties -%}
+{%- for property in profile.properties %}
+/* {{property.prop_name}} (ID: 0x{{'%04X' % property.prop_id}}) type information */
 {%- if "UdsNumericProperty" in property.__class__.__name__ %}
-#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MIN {{property.min}}
-#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MAX {{property.max}}
-#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_DEFAULT {{property.default_value}}
-
-static bool UDS_App_IsPropertyValid_{{profile.name}}_{{property.prop_name}}() {
-    return UDS_Properties_{{profile.name}}.{{property.prop_name}} >= UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MIN &&
-           UDS_Properties_{{profile.name}}.{{property.prop_name}} <= UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_MAX;
-}
-static {{property.get_ctype()}} UDS_App_GetValidProperty_{{profile.name}}_{{property.prop_name}}() {
-    if(UDS_App_IsPropertyValid_{{profile.name}}_{{property.prop_name}}()) {
-        return UDS_Properties_{{profile.name}}.{{property.prop_name}};
-    }
-    return UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_DEFAULT;
-}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.get_ctype()}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_MIN {{property.min}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_MAX {{property.max}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT {{property.default_value}}
 {%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
-#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_DEFAULT {{"true" if property.default_value else "false"}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE bool
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT {{"true" if property.default_value else "false"}}
 {%- elif "UdsEnumProperty" in property.__class__.__name__ %}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE uint8_t
 {% for value in property.values -%}
-#define UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
 {% endfor %}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT {{property.default_value}}
 {% endif %}
 {% endfor %}
 
-// Reset all properties to their default values
-void UDS_ResetProperties_{{profile.name}}(void);
+/* Callback prototypes for property change events */
+{% for property in profile.properties -%}
+void UDS_{{profile.name}}_{{property.prop_name}}_OnChange(void);
+{% endfor %}
+/* Callback prototype for any property change event */
+void UDS_{{profile.name}}_OnPropertyChange(const uds_property_t* property);
+
+/* Container for all properties of {{profile.name}} */
+typedef struct {
+    {% for property in profile.properties -%}
+    UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.prop_name}};
+    {% endfor %}
+} UDS_{{profile.name}}_Properties_t;
+
+extern UDS_{{profile.name}}_Properties_t UDS_{{profile.name}}_Properties;
+
+/* Reset all properties to their default values */
+void UDS_{{profile.name}}_ResetProperties(void);
+
+/* UDS Services ***********************************************************************************/
+
+{% for service in profile.services -%}
+#define UDS_SERVICE_{{profile.name}}_{{service.name}}_ID 0x{{'%04X' % service.service_id}}
+{% endfor %}
 
 {% for service in profile.services %}
-#define UDS_APP_SERVICE_{{profile.name}}_{{service.name}}_ID {{service.service_id}}
-
+/* {{service.name}} (ID: 0x{{'%04X' % service.service_id}}) */
 typedef struct {
     {%- for param in service.params %}
     {{param.param_type}} {{param.param_name}};
@@ -65,13 +77,13 @@ typedef struct {
     {%- endif %}
 } UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t;
 
-void UDS_App_OnServiceRequest_{{profile.name}}_{{service.name}}(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t*, UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t*);
+void UDS_{{profile.name}}_{{service.name}}_OnServiceRequest(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t*, UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t*);
 
-bool UDS_App_HasPendingServiceRequest_{{profile.name}}_{{service.name}}(void);
-void UDS_App_ClearPendingServiceRequest_{{profile.name}}_{{service.name}}(void);
-UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t* UDS_App_GetPendingServiceRequest_{{profile.name}}_{{service.name}}(void);
-UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t* UDS_App_GetPendingServiceResponse_{{profile.name}}_{{service.name}}(void);
-void UDS_App_FinishService_{{profile.name}}_{{service.name}}(uint8_t response_status);
+bool UDS_{{profile.name}}_{{service.name}}_HasPendingServiceRequest(void);
+void UDS_{{profile.name}}_{{service.name}}_ClearPendingServiceRequest(void);
+UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t* UDS_{{profile.name}}_{{service.name}}_GetPendingServiceRequest(void);
+UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t* UDS_{{profile.name}}_{{service.name}}_GetPendingServiceResponse(void);
+void UDS_{{profile.name}}_{{service.name}}_FinishServiceRequest(uint8_t response_status);
 
 {% endfor %}
 
