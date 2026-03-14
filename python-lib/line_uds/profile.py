@@ -12,11 +12,12 @@ class UdsService():
 
 class UdsProperty():
 
-    def __init__(self, name: str, prop_id: int, description: str = "", group: str = "Default") -> None:
+    def __init__(self, name: str, prop_id: int, description: str, group: str, storage_class: str) -> None:
         self.prop_name = name
         self.prop_id = prop_id
         self.description = description
         self.group = group
+        self.storage_class = storage_class
 
     def encode(self, value) -> bytearray:
         raise NotImplementedError()
@@ -26,8 +27,8 @@ class UdsProperty():
 
 class UdsNumericProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, description, group, size, signed, default: int=0) -> None:
-        super().__init__(name, prop_id, description, group)
+    def __init__(self, name, prop_id, description, group, storage_class, size, signed, default: int=0) -> None:
+        super().__init__(name, prop_id, description, group, storage_class)
         self.size = size
         self.signed = signed
         self.default_value = default
@@ -49,8 +50,8 @@ class UdsNumericProperty(UdsProperty):
 
 class UdsBooleanProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, description="", group="Default", default=False) -> None:
-        super().__init__(name, prop_id, description, group)
+    def __init__(self, name, prop_id, description, group, storage_class, default=False) -> None:
+        super().__init__(name, prop_id, description, group, storage_class)
         self.default_value = default
 
     def encode(self, value: bool) -> bytearray:
@@ -68,8 +69,8 @@ class UdsBooleanProperty(UdsProperty):
 
 class UdsEnumProperty(UdsProperty):
 
-    def __init__(self, name, prop_id, description="", group="Default", values=None, default=None) -> None:
-        super().__init__(name, prop_id, description, group)
+    def __init__(self, name, prop_id, description, group, storage_class, values=None, default=None) -> None:
+        super().__init__(name, prop_id, description, group, storage_class)
         self.values = values if values is not None else []
         self.default_value = default
 
