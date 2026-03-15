@@ -1,58 +1,92 @@
 {
+    "types": {
+        "ReadStatus": {
+            "type": "enum",
+            "values": [
+                "OK",
+                "ERROR"
+            ]
+        },
+        "Vector": {
+            "type": "struct",
+            "fields": {
+                "x": {
+                    "type": "int16_t"
+                },
+                "y": {
+                    "type": "int16_t"
+                },
+                "z": {
+                    "type": "int16_t"
+                }
+            }
+        }
+    },
     "services": {
         "VoidNoParams": {
             "id": "0x1000",
-            "params": [],
+            "params": {},
             "return": "void"
         },
         "VoidWithParams": {
             "id": "0x1001",
-            "params": [
-                {
-                    "name": "param1",
+            "params": {
+                "param1": {
                     "type": "uint8_t"
                 },
-                {
-                    "name": "param2",
+                "param2": {
                     "type": "uint16_t"
                 }
-            ],
+            },
             "return": "void"
         },
         "BooleanWithParams": {
             "id": "0x1002",
-            "params": [
-                {
-                    "name": "param1",
+            "params": {
+                "param1": {
                     "type": "uint8_t"
                 },
-                {
-                    "name": "param2",
+                "param2": {
                     "type": "uint16_t"
                 }
-            ],
+            },
             "return": "bool"
         },
         "IntegerNoParams": {
             "id": "0x1003",
-            "params": [],
+            "params": {},
             "return": "uint32_t"
         },
         "IntegerWithParams": {
             "id": "0x1004",
-            "params": [
-                {
-                    "name": "param1",
+            "params": {
+                "param1": {
                     "type": "uint32_t"
                 },
-                {
-                    "name": "param2",
+                "param2": {
                     "type": "uint32_t"
                 }
-            ],
+            },
             "return": "uint32_t"
+        },
+        "StructWithParams": {
+            "id": "0x1005",
+            "params": {
+                "param1": {
+                    "type": "Vector"
+                }
+            },
+            "return": "Vector"
+        },
+        "EnumWithParams": {
+            "id": "0x1006",
+            "params": {
+                "param1": {
+                    "type": "ReadStatus"
+                }
+            },
+            "return": "ReadStatus"
         }
-
     },
     "properties": {
         "BooleanProperty": {
@@ -73,9 +107,15 @@
         },
         "Integer32Property": {
             "id": "0x4003",
-            "type": "uint32_t",
-            "min": 0,
-            "max": 400
+            "type": "uint32_t"
+        },
+        "StructProperty": {
+            "id": "0x4004",
+            "type": "Vector"
+        },
+        "EnumProperty": {
+            "id": "0x4005",
+            "type": "ReadStatus"
         }
     }
 }

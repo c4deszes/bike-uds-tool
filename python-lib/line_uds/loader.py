@@ -2,22 +2,24 @@ import json
 import os
 
 from line_uds.profile import (
-    UdsProfile, UdsNumericProperty, UdsBooleanProperty, UdsEnumProperty,
-    UdsService, UdsServiceParam
+    UdsEnumTypeDefinition, UdsProfile, UdsProperty,
+    UdsService, UdsServiceParam, UdsTypeDefinition, UdsStructTypeDefinition,
+        UdsIntTypeDefinition, UdsBoolTypeDefinition,
+    BUILTIN_TYPES
 )
 
-def get_int_size(type_str) -> int:
-    """Returns the size in bits of the given integer type."""
-    if type_str == 'uint8_t' or type_str == 'int8_t':
-        return 8
-    elif type_str == 'uint16_t' or type_str == 'int16_t':
-        return 16
-    elif type_str == 'uint32_t' or type_str == 'int32_t':
-        return 32
-    elif type_str == 'uint64_t' or type_str == 'int64_t':
-        return 64
-    else:
-        raise ValueError(f"Unknown integer type: {type_str}")
+def auto_int(x):
+    if isinstance(x, int):
+        return x
+    return int(x, 0)
+
+def lookup_type_definition(type_definitions: list[UdsTypeDefinition], type_name: str) -> UdsTypeDefinition:
+    if type_name in BUILTIN_TYPES:
+        return BUILTIN_TYPES[type_name]
+    for type_def in type_definitions:
+        if type_def.name == type_name:
+            return type_def
+    raise ValueError(f"Type definition not found for type name: {type_name}")
 
 def load_profile(profile):
     with open(profile, 'r') as f:
@@ -25,19 +27,32 @@ def load_profile(profile):
 
         profile = UdsProfile()
 
+        type_definitions = []
+        for name, type_def in data['types'].items():
+            if type_def['type'] == 'struct':
+                members = {}
+                for member_name, member in type_def['fields'].items():
+                    members[member_name] = lookup_type_definition(type_definitions, member['type'])
+                type_definitions.append(UdsStructTypeDefinition(name, members))
+            elif type_def['type'] == 'enum':
+                type_definitions.append(UdsEnumTypeDefinition(name, type_def['values']))
+            else:
+                raise ValueError(f"Unknown type definition type: {type_def['type']} for type {name}")
+        profile.type_definitions = type_definitions
+
         services = []
         for name, service in data['services'].items():
             params = []
-            for param in service['params']:
+            for param_name, param in service['params'].items():
                 params.append(UdsServiceParam(
-                    param['name'],
-                    param['type'],
+                    param_name,
+                    lookup_type_definition(type_definitions, param['type']),
                 ))
             svc = UdsService(
                 name,
                 int(service['id'], 0),
                 params,
-                service['return']
+                lookup_type_definition(type_definitions, service['return']) if service['return'] != 'void' else 'void'
             )
             services.append(svc)
 
@@ -49,28 +64,36 @@ def load_profile(profile):
             description = prop['description'] if 'description' in prop else ""
             group = prop['group'] if 'group' in prop else "Default"
             storage_class = prop['storage_class'] if 'storage_class' in prop else "volatile"
-            if prop['type'] in ['uint8_t', 'uint16_t', 'uint32_t', 'uint64_t']:
-                byte_size = get_int_size(prop['type']) // 8
-                numeric_prop = UdsNumericProperty(name, property_id, description, group, storage_class, byte_size, False, prop['default'] if 'default' in prop else 0)
-                if 'min' in prop:
-                    numeric_prop.min = prop['min']
-                if 'max' in prop:
-                    numeric_prop.max = prop['max']
-                properties.append(numeric_prop)
-            elif prop['type'] in ['int8_t', 'int16_t', 'int32_t', 'int64_t']:
-                byte_size = get_int_size(prop['type']) // 8
-                numeric_prop = UdsNumericProperty(name, property_id, description, group, storage_class, byte_size, True, prop['default'] if 'default' in prop else 0)
-                if 'min' in prop:
-                    numeric_prop.min = prop['min']
-                if 'max' in prop:
-                    numeric_prop.max = prop['max']
-                properties.append(numeric_prop)
-            elif prop['type'] == 'bool':
-                properties.append(UdsBooleanProperty(name, property_id, description, group, storage_class, prop['default'] if 'default' in prop else False))
-            elif prop['type'] == 'enum':
-                properties.append(UdsEnumProperty(name, property_id, description, group, storage_class, prop['values'], prop['default'] if 'default' in prop else None))
 
-            # TODO: warning for unknown property type
+            if prop['type'] in BUILTIN_TYPES:
+                prop_type = BUILTIN_TYPES[prop['type']]
+                property = UdsProperty(name, property_id, description, group, storage_class, prop_type)
+
+                if isinstance(prop_type, UdsIntTypeDefinition):
+                    if 'min' in prop:
+                        property.min = auto_int(prop['min'])
+                    else:
+                        property.min = -(2 ** (prop_type.size * 8 - 1)) if prop_type.signed else 0
+                    if 'max' in prop:
+                        property.max = auto_int(prop['max'])
+                    else:
+                        property.max = (2 ** (prop_type.size * 8 - 1) - 1) if prop_type.signed else (2 ** (prop_type.size * 8) - 1)
+                    property.default_value = auto_int(prop['default']) if 'default' in prop else 0
+                elif isinstance(prop_type, UdsBoolTypeDefinition):
+                    property.default_value = prop['default'] if 'default' in prop else False
+
+                properties.append(property)
+            else:
+                prop_type = lookup_type_definition(type_definitions, prop['type'])
+                property = UdsProperty(name, property_id, description, group, storage_class, prop_type)
+
+                if isinstance(prop_type, UdsEnumTypeDefinition):
+                    property.default_value = prop['default'] if 'default' in prop else prop_type.values[0]
+                elif isinstance(prop_type, UdsStructTypeDefinition):
+                    # TODO: support for default values of struct properties
+                    pass
+
+                properties.append(property)
 
         profile.properties = properties
 

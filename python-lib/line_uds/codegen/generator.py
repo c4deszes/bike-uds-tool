@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import List
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from ..profile import UdsProfile, UdsNumericProperty, UdsBooleanProperty, UdsEnumProperty
+from ..profile import UdsProfile
 from ..loader import load_profile
 
 @dataclass

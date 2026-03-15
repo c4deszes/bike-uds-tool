@@ -20,12 +20,12 @@ UDS_{{profile.name}}_Properties_t UDS_{{profile.name}}_Properties;
 
 void UDS_{{profile.name}}_ResetProperties(void) {
     {% for property in profile.properties -%}
-    {% if "UdsNumericProperty" in property.__class__.__name__ -%}
-    UDS_{{profile.name}}_Properties.{{property.prop_name}} = {{property.default_value}};
-    {% elif "UdsBooleanProperty" in property.__class__.__name__ -%}
-    UDS_{{profile.name}}_Properties.{{property.prop_name}} = {{"true" if property.default_value else "false"}};
-    {% elif "UdsEnumProperty" in property.__class__.__name__ and property.default_value != None -%}
-    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{property.default_value}};
+    {% if "UdsIntTypeDefinition" in property.typedef.__class__.__name__ -%}
+    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT;
+    {% elif "UdsBoolTypeDefinition" in property.typedef.__class__.__name__ -%}
+    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT;
+    {% elif "UdsEnumTypeDefinition" in property.typedef.__class__.__name__ -%}
+    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT;
     {% endif -%}
     {% endfor %}
 }
@@ -64,7 +64,7 @@ void UDS_{{profile.name}}_OnGetProperty(uint16_t property_id) {
     switch (property_id) {
         {% for property in profile.properties %}
         case UDS_PROP_{{profile.name}}_{{property.prop_name}}_ID: {
-            {{property.get_ctype()}} value = UDS_{{profile.name}}_Properties.{{property.prop_name}};
+            {{property.typedef.get_ctype()}} value = UDS_{{profile.name}}_Properties.{{property.prop_name}};
             UDS_{{profile.name}}_EnqueueGetPropertyResponse(property_id, sizeof(value), (uint8_t*)&value);
             break;
         }
@@ -169,11 +169,11 @@ void UDS_{{profile.name}}_OnSetProperty(uint16_t property_id, uint8_t size, uint
     switch(property_id) {
         {% for property in profile.properties %}
         case UDS_PROP_{{profile.name}}_{{property.prop_name}}_ID: {
-            if (size != sizeof({{property.get_ctype()}})) {
+            if (size != sizeof({{property.typedef.get_ctype()}})) {
                 UDS_{{profile.name}}_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_WRITE_FAILURE);
                 break;
             }
-            {{property.get_ctype()}} value = *(({{property.get_ctype()}}*)data);
+            {{property.typedef.get_ctype()}} value = *(({{property.typedef.get_ctype()}}*)data);
             UDS_{{profile.name}}_Properties.{{property.prop_name}} = value;
             UDS_{{profile.name}}_{{property.prop_name}}_OnChange();
             UDS_{{profile.name}}_OnPropertyChange(&UDS_PROP_{{profile.name}}_{{property.prop_name}});

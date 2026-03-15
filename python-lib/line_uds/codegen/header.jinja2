@@ -9,6 +9,24 @@
 {% for profile in config.profiles %}
 /* Profile: {{profile.name}} */
 
+/* Type definitions for {{profile.name}} *******************************************************/
+
+{% for type_def in profile.type_definitions -%}
+{% if "UdsStructTypeDefinition" in type_def.__class__.__name__ -%}
+typedef struct {
+    {%- for member, member_type in type_def.fields.items() %}
+    {{member_type.name}} {{member}};
+    {%- endfor %}
+} {{type_def.get_ctype()}};
+{% elif "UdsEnumTypeDefinition" in type_def.__class__.__name__ -%}
+typedef enum {
+    {%- for value in type_def.values %}
+    uds_{{type_def.name}}_{{value}} = {{loop.index0}},
+    {%- endfor %}
+} {{type_def.get_ctype()}};
+{% endif %}
+{% endfor -%}
+
 /* Property information for {{profile.name}} ******************************************************/
 
 /* UDS Property IDs */
@@ -18,23 +36,23 @@
 
 {%- for property in profile.properties %}
 /* {{property.prop_name}} (ID: 0x{{'%04X' % property.prop_id}}) type information */
-{%- if "UdsNumericProperty" in property.__class__.__name__ %}
+{%- if "UdsIntTypeDefinition" in property.typedef.__class__.__name__ %}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
-#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.get_ctype()}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.typedef.get_ctype()}}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_MIN {{property.min}}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_MAX {{property.max}}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT {{property.default_value}}
-{%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
+{%- elif "UdsBoolTypeDefinition" in property.typedef.__class__.__name__ %}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
-#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE bool
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.typedef.get_ctype()}}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT {{"true" if property.default_value else "false"}}
-{%- elif "UdsEnumProperty" in property.__class__.__name__ %}
+{%- elif "UdsEnumTypeDefinition" in property.typedef.__class__.__name__ %}
 #define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
-#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE uint8_t
-{% for value in property.values -%}
-#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_VALUE_{{value}} {{loop.index0}}
-{% endfor %}
-#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT {{property.default_value}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.typedef.get_ctype()}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT uds_{{property.typedef.name}}_{{property.default_value}}
+{%- elif "UdsStructTypeDefinition" in property.typedef.__class__.__name__ %}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_STORAGE uds_storage_class_{{property.storage_class}}
+#define UDS_PROP_{{profile.name}}_{{property.prop_name}}_TYPE {{property.typedef.get_ctype()}}
 {% endif %}
 {% endfor %}
 
@@ -67,13 +85,13 @@ void UDS_{{profile.name}}_ResetProperties(void);
 /* {{service.name}} (ID: 0x{{'%04X' % service.service_id}}) */
 typedef struct {
     {%- for param in service.params %}
-    {{param.param_type}} {{param.param_name}};
+    {{param.param_type.get_ctype()}} {{param.param_name}};
     {%- endfor %}
 } UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t;
 
 typedef struct {
     {%- if service.return_type != 'void' %}
-    {{service.return_type}} return_value;
+    {{service.return_type.get_ctype()}} return_value;
     {%- endif %}
 } UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t;
 
