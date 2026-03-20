@@ -8,6 +8,19 @@ class UdsTypeDefinition():
     def decode(self, data: bytearray) -> any:
         raise NotImplementedError()
     
+class UdsVoidTypeDefinition(UdsTypeDefinition):
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+
+    def encode(self, value) -> bytearray:
+        return bytearray()
+
+    def decode(self, data: bytearray) -> any:
+        return None
+    
+    def get_ctype(self) -> str:
+        return 'void'
+    
 class UdsIntTypeDefinition(UdsTypeDefinition):
     def __init__(self, name: str, size: int, signed: bool) -> None:
         super().__init__(name)
@@ -91,6 +104,7 @@ BUILTIN_TYPES = {
     'int32_t': UdsIntTypeDefinition('int32_t', 4, True),
     'int64_t': UdsIntTypeDefinition('int64_t', 8, True),
     'bool': UdsBoolTypeDefinition('bool'),
+    'void': UdsVoidTypeDefinition('void')
 }
 
 ####################
@@ -101,11 +115,23 @@ class UdsServiceParam():
         self.param_type = param_type
 
 class UdsService():
-    def __init__(self, name: str, service_id: int, params: list[UdsServiceParam], return_type: UdsTypeDefinition) -> None:
+    def __init__(self, name: str, service_id: int, description: str, group: str, params: list[UdsServiceParam], return_type: UdsTypeDefinition) -> None:
         self.name = name
         self.service_id = service_id
+        self.description = description
+        self.group = group
         self.params = params
         self.return_type = return_type
+
+    def encode_parameters(self, param_values: dict[str, any]) -> bytearray:
+        data = bytearray()
+        for param in self.params:
+            value = param_values[param.param_name]
+            data.extend(param.param_type.encode(value))
+        return data
+    
+    def decode_return_value(self, data: bytearray) -> any:
+        return self.return_type.decode(data)
 
 class UdsProperty():
 
@@ -122,66 +148,6 @@ class UdsProperty():
 
     def decode(self, data: bytearray) -> any:
         return self.typedef.decode(data)
-
-# class UdsNumericProperty(UdsProperty):
-
-#     def __init__(self, name, prop_id, description, group, storage_class, size, signed, default: int=0) -> None:
-#         super().__init__(name, prop_id, description, group, storage_class)
-#         self.size = size
-#         self.signed = signed
-#         self.default_value = default
-#         self.min = -(2 ** (self.size * 8 - 1)) if self.signed else 0
-#         self.max = (2 ** (self.size * 8 - 1)) - 1 if self.signed else (2 ** (self.size * 8)) - 1
-
-#     def encode(self, value: int) -> bytearray:
-#         if isinstance(value, str):
-#             value = int(value)
-#         return bytearray(value.to_bytes(self.size, 'little', signed=self.signed))
-
-#     def decode(self, data: bytearray) -> int:
-#         return int.from_bytes(data, 'little', signed=self.signed)
-
-#     def get_ctype(self) -> str:
-#         if self.signed:
-#             return f'int{self.size * 8}_t'
-#         return f'uint{self.size * 8}_t'
-
-# class UdsBooleanProperty(UdsProperty):
-
-#     def __init__(self, name, prop_id, description, group, storage_class, default=False) -> None:
-#         super().__init__(name, prop_id, description, group, storage_class)
-#         self.default_value = default
-
-#     def encode(self, value: bool) -> bytearray:
-#         if value:
-#             return bytearray([0x01])
-#         return bytearray([0x00])
-
-#     def decode(self, data: bytearray) -> bool:
-#         if data[0] == 0x00:
-#             return False
-#         return True
-    
-#     def get_ctype(self) -> str:
-#         return 'bool'
-
-# class UdsEnumProperty(UdsProperty):
-
-#     def __init__(self, name, prop_id, description, group, storage_class, values=None, default=None) -> None:
-#         super().__init__(name, prop_id, description, group, storage_class)
-#         self.values = values if values is not None else []
-#         self.default_value = default
-
-#     def encode(self, value) -> bytearray:
-#         # todo: error handling (value not in values)
-#         return bytearray([self.values.index(value)])
-
-#     def decode(self, data: bytearray) -> any:
-#         # todo: error handling (index out of range)
-#         return self.values[data[0]]
-
-#     def get_ctype(self) -> str:
-#         return 'uint8_t'
 
 class UdsProfile():
 
@@ -212,3 +178,12 @@ class UdsProfile():
             if service.service_name == service_name or service.service_id == service_name:
                 return service
         raise LookupError(f"Service {service_name} not found")
+    
+    def get_service_groups(self) -> list[str]:
+        groups = set()
+        for service in self.services:
+            groups.add(service.group)
+        return list(groups)
+    
+    def get_services_by_group(self, group_name) -> list[UdsService]:
+        return [service for service in self.services if service.group == group_name]

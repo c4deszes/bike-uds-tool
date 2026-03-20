@@ -20,6 +20,11 @@ class UdsGetPropertyException(Exception):
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
 
+class UdsServiceCallException(Exception):
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
 @dataclass
 class UdsGetPropertyRequest():
     address: int
@@ -32,6 +37,14 @@ class UdsSetPropertyRequest():
     address: int
     prop_id: int
     value: bytes
+    delay: float
+    timeout: float
+
+@dataclass
+class UdsServiceRequest():
+    address: int
+    service_id: int
+    data: bytes
     delay: float
     timeout: float
 
@@ -66,6 +79,22 @@ class UdsSetPropertyEvent():
         self.exception = None
 
 @dataclass
+class UdsServiceEvent():
+    service: UdsServiceRequest
+    event_id: int
+    event: Event
+    # Filled out after event is set
+    response: bytes
+    exception: Exception
+
+    def __init__(self, service: UdsServiceRequest, event_id: int, event: Event):
+        self.service = service
+        self.event_id = event_id
+        self.event = event
+        self.response = None
+        self.exception = None
+
+@dataclass
 class UdsPropertyValue:
     buffer: bytearray
     value: any
@@ -91,7 +120,7 @@ class UdsNodeStatusListener():
 class UdsTool():
 
     def __init__(self, master: 'LineMaster'):
-        self._master = master
+        self._master: 'LineMaster' = master
         self._queue = Queue[Union[UdsGetPropertyEvent, UdsSetPropertyEvent]](100)
         self._event_id = 0
         self._running = False
@@ -182,6 +211,19 @@ class UdsTool():
         else:
             event.exception = UdsSetPropertyException("Unknown error")
             return True
+        
+    def _process_serviceevent(self, response, event: UdsServiceEvent) -> bool:
+        if len(response) < 3:
+            event.exception = UdsServiceCallException("Invalid response length")
+            return True
+        if response[2] == UDS_SERVICE_CALL_SUCCESS:
+            event.response = response[3:]
+            return True
+        elif response[2] == UDS_SERVICE_CALL_NOT_READY:
+            return False
+        else:
+            event.exception = UdsServiceCallException("Service call failed")
+            return True
 
     def _run(self):
         while self._running:
@@ -233,6 +275,29 @@ class UdsTool():
                     except Exception as e:
                         event.exception = e
                         event.event.set()
+                elif isinstance(event, UdsServiceEvent):
+                    start = time.time()
+                    timeout = event.service.timeout
+                    self._master.send_request(UDS_SERVICE_CALL_REQUEST_ID | event.service.address,
+                                              list(event.service.service_id.to_bytes(2, 'big')) + list(event.service.data),
+                                              wait=True, timeout=timeout)
+                    timeout -= time.time() - start
+                    try:
+                        while timeout > 0:
+                            time.sleep(event.service.delay)
+                            timeout -= event.service.delay
+                            start = time.time()
+                            response = self._master.request(UDS_SERVICE_RETURN_REQUEST_ID | event.service.address,
+                                                            wait=True, timeout=timeout)
+                            timeout -= time.time() - start
+                            if self._process_serviceevent(response, event):
+                                event.event.set()
+                                break
+                        if timeout <= 0:
+                            raise UdsServiceCallException("Timeout")
+                    except Exception as e:
+                        event.exception = e
+                        event.event.set()
             except Empty as e:
                 pass
 
@@ -259,10 +324,23 @@ class UdsTool():
             if event.exception:
                 raise event.exception
             
+    def call_service_raw(self, address: int, service_id: int, data: bytes, delay: float = 0.05,
+                         wait: bool = False, timeout: float = 1):
+        event = UdsServiceEvent(UdsServiceRequest(address, service_id, data, delay, timeout), self._event_id, Event())
+        self._queue.put(event)
+        self._event_id += 1
+
+        if wait:
+            event.event.wait(timeout)
+            if event.exception:
+                raise event.exception
+            return event.response
+            
     def _find_node_by_name(self, name: str) -> Node:
-        for node in self._master.network.nodes:
-            if node.name == name:
-                return node
+        if self._master.network is not None:
+            for node in self._master.network.nodes:
+                if node.name == name:
+                    return node
         raise ValueError(f"Node with name {name} not found")
 
     def get_property(self, address: Union[int, str], prop_id: Union[int, str], delay: float = 0.05,
@@ -283,3 +361,13 @@ class UdsTool():
 
         prop_value = self._nodes[address].profile.get_property(prop_id).encode(value)
         return self.set_property_raw(address, prop_id, prop_value, delay, wait, timeout)
+    
+    def call_service(self, address: Union[int, str], service_id: Union[int, str], params: Dict[str, any], delay: float = 0.05,
+                        wait: bool = False, timeout: float = 1):
+        if isinstance(address, str):
+            address = self._find_node_by_name(address).address
+        service = self._nodes[address].profile.get_service(service_id)
+
+        data = service.encode_parameters(params)
+
+        return self.call_service_raw(address, service_id, data, delay, wait, timeout)

@@ -90,7 +90,7 @@ typedef struct {
 } UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t;
 
 typedef struct {
-    {%- if service.return_type != 'void' %}
+    {%- if service.return_type.__class__.__name__ != "UdsVoidTypeDefinition" %}
     {{service.return_type.get_ctype()}} return_value;
     {%- endif %}
 } UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t;

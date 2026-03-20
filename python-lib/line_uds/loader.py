@@ -51,8 +51,10 @@ def load_profile(profile):
             svc = UdsService(
                 name,
                 int(service['id'], 0),
+                service['description'] if 'description' in service else "",
+                service['group'] if 'group' in service else "Default",
                 params,
-                lookup_type_definition(type_definitions, service['return']) if service['return'] != 'void' else 'void'
+                lookup_type_definition(type_definitions, service['return'])
             )
             services.append(svc)
 
