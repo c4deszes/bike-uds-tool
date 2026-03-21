@@ -35,6 +35,16 @@ class UdsIntTypeDefinition(UdsTypeDefinition):
     def decode(self, data: bytearray) -> int:
         return int.from_bytes(data, 'little', signed=self.signed)
     
+    def get_minimum(self) -> int:
+        if not self.signed:
+            return 0
+        return -(2 ** (self.size * 8 - 1))
+
+    def get_maximum(self) -> int:
+        if not self.signed:
+            return (2 ** (self.size * 8) - 1)
+        return (2 ** (self.size * 8 - 1) - 1)
+    
     def get_ctype(self) -> str:
         if self.signed:
             return f'int{self.size * 8}_t'
@@ -175,7 +185,7 @@ class UdsProfile():
 
     def get_service(self, service_name) -> UdsService:
         for service in self.services:
-            if service.service_name == service_name or service.service_id == service_name:
+            if service.name == service_name or service.service_id == service_name:
                 return service
         raise LookupError(f"Service {service_name} not found")
     

@@ -7,7 +7,7 @@ from queue import Queue, Empty
 from threading import Thread, Event
 from dataclasses import dataclass
 
-from line_uds.profile import UdsProperty
+from line_uds.profile import UdsProperty, UdsService
 from line_protocol.network.nodes import Node, NodeRef
 
 class UdsSetPropertyException(Exception):
@@ -107,14 +107,35 @@ class UdsPropertyStatus:
         self.exception: Exception | None = None
 
 @dataclass
+class UdsServiceReturn:
+    buffer: bytearray
+    value: any
+
+class UdsServiceStatus:
+
+    def __init__(self, service: UdsService, data: UdsServiceReturn):
+        self.service = service
+        # TODO: status code
+        self.data = data
+        self.exception: Exception | None = None
+
+@dataclass
 class UdsNodeStatus():
     _node: Node
     profile: UdsProfile
     properties: Dict[int, UdsPropertyStatus]
+    services: Dict[int, UdsServiceStatus]
 
 class UdsNodeStatusListener():
 
     def on_property_change(self, node: Node, prop: UdsProperty, value: UdsPropertyValue):
+        pass
+
+    # TODO: status code
+    def on_service_finish(self, node: Node, service: UdsService, result: UdsServiceReturn):
+        pass
+
+    def on_service_failure(self, node: Node, service: UdsService, exception: Exception):
         pass
 
 class UdsTool():
@@ -132,10 +153,14 @@ class UdsTool():
         if isinstance(profile, str):
             profile = load_profile(profile)
 
-        self._nodes[node.address] = UdsNodeStatus(node, profile, {})
+        self._nodes[node.address] = UdsNodeStatus(node, profile, {}, {})
         for prop in profile.properties:
             # TODO: initialize default values for properties
             self._nodes[node.address].properties[prop.prop_id] = UdsPropertyStatus(prop, UdsPropertyValue(None, None))
+
+        for service in profile.services:
+            # TODO: initialize default values
+            self._nodes[node.address].services[service.service_id] = UdsServiceStatus(service, UdsServiceReturn(None, None))
 
         return profile
     
@@ -161,6 +186,16 @@ class UdsTool():
 
             for listener in self._listeners:
                 listener.on_property_change(self._nodes[address]._node, property_status.prop, property_status.data)
+
+    def _update_service(self, address: int, service_id: int, status_code: int, value: bytes):
+        if address in self._nodes and service_id in self._nodes[address].services:
+            service_status = self._nodes[address].services[service_id]
+            service_status.data.buffer = bytearray(value)
+            if service_status.service is not None:
+                service_status.data.value = service_status.service.decode_return_value(service_status.data.buffer)
+
+                for listener in self._listeners:
+                    listener.on_service_finish(self._nodes[address]._node, service_status.service, service_status.data)
 
     def _process_getevent(self, response, event: UdsGetPropertyEvent) -> bool:
         # TODO: in all cases update the properties of the node
@@ -214,16 +249,22 @@ class UdsTool():
         
     def _process_serviceevent(self, response, event: UdsServiceEvent) -> bool:
         if len(response) < 3:
-            event.exception = UdsServiceCallException("Invalid response length")
+            raise UdsServiceCallException("Invalid response length")
+        
+        status_code = response[2]
+
+        if status_code == UDS_SERVICE_CALL_SUCCESS:
+            if len(response) == 3:
+                event.response = []
+            else:
+                event.response = response[3:]
+
+            self._update_service(event.service.address, event.service.service_id, status_code, event.response)
             return True
-        if response[2] == UDS_SERVICE_CALL_SUCCESS:
-            event.response = response[3:]
-            return True
-        elif response[2] == UDS_SERVICE_CALL_NOT_READY:
+        elif status_code == UDS_SERVICE_CALL_NOT_READY:
             return False
         else:
-            event.exception = UdsServiceCallException("Service call failed")
-            return True
+            raise UdsServiceCallException("Service call failed")
 
     def _run(self):
         while self._running:
@@ -298,6 +339,9 @@ class UdsTool():
                     except Exception as e:
                         event.exception = e
                         event.event.set()
+
+                        for listener in self._listeners:
+                            listener.on_service_failure(self._nodes[event.service.address]._node, self._nodes[event.service.address].services[event.service.service_id].service, e)
             except Empty as e:
                 pass
 
