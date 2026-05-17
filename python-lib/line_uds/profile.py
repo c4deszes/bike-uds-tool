@@ -8,6 +8,9 @@ class UdsTypeDefinition():
     def decode(self, data: bytearray) -> any:
         raise NotImplementedError()
     
+    def get_size(self) -> int:
+        raise NotImplementedError()
+    
 class UdsVoidTypeDefinition(UdsTypeDefinition):
     def __init__(self, name: str) -> None:
         super().__init__(name)
@@ -20,6 +23,9 @@ class UdsVoidTypeDefinition(UdsTypeDefinition):
     
     def get_ctype(self) -> str:
         return 'void'
+    
+    def get_size(self) -> int:
+        return 0
     
 class UdsIntTypeDefinition(UdsTypeDefinition):
     def __init__(self, name: str, size: int, signed: bool) -> None:
@@ -50,6 +56,9 @@ class UdsIntTypeDefinition(UdsTypeDefinition):
             return f'int{self.size * 8}_t'
         return f'uint{self.size * 8}_t'
     
+    def get_size(self):
+        return self.size
+    
 class UdsBoolTypeDefinition(UdsTypeDefinition):
     def __init__(self, name: str) -> None:
         super().__init__(name)
@@ -66,6 +75,9 @@ class UdsBoolTypeDefinition(UdsTypeDefinition):
     
     def get_ctype(self) -> str:
         return 'bool'
+    
+    def get_size(self):
+        return 1
 
 class UdsStructTypeDefinition(UdsTypeDefinition):
     def __init__(self, name: str, fields: dict[str, UdsTypeDefinition]) -> None:
@@ -89,6 +101,12 @@ class UdsStructTypeDefinition(UdsTypeDefinition):
     
     def get_ctype(self) -> str:
         return f"uds_{self.name}_t"
+    
+    def get_size(self) -> int:
+        size = 0
+        for field_name, field_type in self.fields.items():
+            size += field_type.get_size()
+        return size
 
 class UdsEnumTypeDefinition(UdsTypeDefinition):
     def __init__(self, name: str, values: list[str]) -> None:
@@ -103,6 +121,9 @@ class UdsEnumTypeDefinition(UdsTypeDefinition):
     
     def get_ctype(self) -> str:
         return f"uds_{self.name}_t"
+    
+    def get_size(self) -> int:
+        return 1
     
 BUILTIN_TYPES = {
     'uint8_t': UdsIntTypeDefinition('uint8_t', 1, False),

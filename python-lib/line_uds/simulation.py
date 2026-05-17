@@ -22,9 +22,17 @@ class SimulatedUdsExtension(SimulatedDiagnosticExtension):
         self.subscriber(UDS_PROPERTY_SET_CALL_REQUEST_ID, self.uds_set_request)
         self.publisher(UDS_PROPERTY_SET_RETURN_REQUEST_ID, self.uds_set_response)
 
+        self.subscriber(UDS_SERVICE_CALL_REQUEST_ID, self.uds_call_service)
+        self.publisher(UDS_SERVICE_RETURN_REQUEST_ID, self.uds_call_response)
+
         self._get_property_id = None
         self._set_property_id = None
         self._set_property_status = None
+        self._service_id = None
+        self._service_data = None
+        self._service_status = None
+        self._service_response_data = None
+
         self.reset_properties()
 
         self.listener: UdsExtensionListener = None
@@ -82,4 +90,50 @@ class SimulatedUdsExtension(SimulatedDiagnosticExtension):
             response = SimulatedUdsExtension._create_response(self._set_property_id, [self._set_property_status])
             self._set_property_id = None
             self._set_property_status = None
+            return response
+
+    def has_pending_service_call(self) -> bool:
+        return self._service_id is not None
+    
+    def get_pending_service_call(self) -> tuple[int, list[int]] | None:
+        if self._service_id is not None:
+            return self._service_id, self._service_data
+        else:
+            return None
+
+    def uds_call_service(self, data: list[int]) -> None:
+        if self._service_id is not None:
+            # Previous service call still pending, ignore new request
+            return
+        self._service_id = (data[0] << 8) | data[1]
+
+        try:
+            self.profile.get_service(self._service_id)  # Validate service ID
+
+            self._service_data = data[2:] if len(data) > 2 else []
+            self._service_status = UDS_SERVICE_CALL_NOT_READY
+            self._service_response_data = []
+        except LookupError:
+            self._service_status = UDS_SERVICE_CALL_NO_SUCH_SERVICE
+
+    def uds_call_response(self) -> list[int]:
+        if self._service_id is None:
+            return SimulatedUdsExtension._create_response(0x0000, [UDS_SERVICE_CALL_NO_REQUEST])
+
+        if self._service_status == UDS_SERVICE_CALL_NOT_READY:
+            response = SimulatedUdsExtension._create_response(self._service_id, [UDS_SERVICE_CALL_NOT_READY])
+            return response
+        elif self._service_status == UDS_SERVICE_CALL_SUCCESS:
+            response = SimulatedUdsExtension._create_response(self._service_id, [UDS_SERVICE_CALL_SUCCESS] + self._service_response_data)
+            self._service_id = None
+            self._service_data = None
+            self._service_status = None
+            self._service_response_data = None
+            return response
+        else:
+            response = SimulatedUdsExtension._create_response(self._service_id, [self._service_status])
+            self._service_id = None
+            self._service_data = None
+            self._service_status = None
+            self._service_response_data = None
             return response
