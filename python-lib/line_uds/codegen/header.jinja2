@@ -15,7 +15,7 @@
 {% if "UdsStructTypeDefinition" in type_def.__class__.__name__ -%}
 typedef struct {
     {%- for member, member_type in type_def.fields.items() %}
-    {{member_type.name}} {{member}};
+    {{member_type.get_ctype()}} {{member}};
     {%- endfor %}
 } {{type_def.get_ctype()}};
 {% elif "UdsEnumTypeDefinition" in type_def.__class__.__name__ -%}
