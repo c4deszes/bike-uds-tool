@@ -51,16 +51,20 @@ LINE_Diag_Config_t diag_config = {
     .software_version = LINE_Diag_GetSoftwareVersion
 };
 
+LINE_TRANSPORT_INST(transport_instance, 64, 64, TWOWIRE);
+
 class TestUdsLineServices : public testing::Test {
 public:
     static void SetUpTestSuite() {
-        LINE_Transport_Init(0, false);
+        LINE_Transport_Init(0, &transport_instance);
         LINE_Diag_Init(0, &diag_config);
         UDS_Init();
     }
 protected:
     void SetUp() override {
-        
+        RESET_FAKE(LINE_Transport_OnError);
+        RESET_FAKE(LINE_Transport_WriteResponse);
+        RESET_FAKE(LINE_Transport_WriteRequest);
     }
 };
 

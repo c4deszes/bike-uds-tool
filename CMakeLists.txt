@@ -19,7 +19,7 @@ option(UDS_LINE_BUILD_DOCS "Enables library documentation" OFF)
 # Dependencies
 ################################################################################
 include(tools/cmake/CPM.cmake)
-CPMAddPackage("gh:c4deszes/bike-line-protocol@0.3.0")
+CPMAddPackage("gh:c4deszes/bike-line-protocol@0.4.0")
 
 find_package(Python REQUIRED)
 

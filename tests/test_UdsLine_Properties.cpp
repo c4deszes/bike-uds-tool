@@ -43,10 +43,11 @@ void LINE_Transport_OnData(uint8_t channel, bool response, uint16_t request, uin
 #define UINT16_L(x) ((uint8_t)(x & 0xFF))
 #define UINT16_H(x) ((uint8_t)((x >> 8) & 0xFF))
 
+#define TRANSPORT_CHANNEL 0
 #define TEST_NODE_ADDRESS 0x5
 
 LINE_Diag_Config_t diag_config = {
-    .transport_channel = 0,
+    .transport_channel = TRANSPORT_CHANNEL,
     .address = TEST_NODE_ADDRESS,
     .op_status = LINE_Diag_GetOperationStatus,
     .power_status = LINE_Diag_GetPowerStatus,
@@ -54,10 +55,12 @@ LINE_Diag_Config_t diag_config = {
     .software_version = LINE_Diag_GetSoftwareVersion
 };
 
+LINE_TRANSPORT_INST(transport_instance, 64, 64, TWOWIRE);
+
 class TestUdsLineProperties : public testing::Test {
     public:
         static void SetUpTestSuite() {
-            LINE_Transport_Init(0, false);
+            LINE_Transport_Init(TRANSPORT_CHANNEL, &transport_instance);
             LINE_Diag_Init(0, &diag_config);
             UDS_Init();
         }
@@ -73,7 +76,7 @@ class TestUdsLineProperties : public testing::Test {
 TEST_F(TestUdsLineProperties, GetPropertyResponse_NoRequest) {
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -88,12 +91,12 @@ TEST_F(TestUdsLineProperties, GetPropertyResponse_BadRequest) {
                 UDS_PROPERTY_GET_CALL_REQUEST_ID | TEST_NODE_ADDRESS,
                 0xFF);
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -109,12 +112,12 @@ TEST_F(TestUdsLineProperties, GetPropertyResponse_NoSuchProperty) {
                 UINT16_H(0xFFFF),
                 UINT16_L(0xFFFF));
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -132,12 +135,12 @@ TEST_F(TestUdsLineProperties, GetPropertyResponse_ValidResponse_Bool) {
                 UINT16_H(UDS_PROP_FrontLight_BooleanProperty_ID),
                 UINT16_L(UDS_PROP_FrontLight_BooleanProperty_ID));
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -155,12 +158,12 @@ TEST_F(TestUdsLineProperties, GetPropertyResponse_ValidResponse_8bit) {
                 UINT16_H(UDS_PROP_FrontLight_Integer8Property_ID),
                 UINT16_L(UDS_PROP_FrontLight_Integer8Property_ID));
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -178,12 +181,12 @@ TEST_F(TestUdsLineProperties, GetPropertyResponse_ValidResponse_16bit) {
                 UINT16_H(UDS_PROP_FrontLight_Integer16Property_ID),
                 UINT16_L(UDS_PROP_FrontLight_Integer16Property_ID));
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -202,12 +205,12 @@ TEST_F(TestUdsLineProperties, GetPropertyResponse_ValidResponse_32bit) {
                 UINT16_H(UDS_PROP_FrontLight_Integer32Property_ID),
                 UINT16_L(UDS_PROP_FrontLight_Integer32Property_ID));
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     BUILD_REQUEST(response, UDS_PROPERTY_GET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);
@@ -227,7 +230,7 @@ TEST_F(TestUdsLineProperties, SetPropertyResponse_ValidResponse_32bit) {
                 UINT16_L(UDS_PROP_FrontLight_Integer32Property_ID),
                 0x00, 0x01, 0x02, 0x03);
     for (int i = 0; i < sizeof(request); i++) {
-        LINE_Transport_Receive(0, request[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, request[i]);
     }
 
     ASSERT_EQ(UDS_FrontLight_Integer32Property_OnChange_fake.call_count, 1);
@@ -238,7 +241,7 @@ TEST_F(TestUdsLineProperties, SetPropertyResponse_ValidResponse_32bit) {
 
     BUILD_REQUEST(response, UDS_PROPERTY_SET_RETURN_REQUEST_ID | TEST_NODE_ADDRESS);
     for (int i = 0; i < sizeof(response); i++) {
-        LINE_Transport_Receive(0, response[i]);
+        LINE_Transport_Receive(TRANSPORT_CHANNEL, response[i]);
     }
 
     ASSERT_EQ(LINE_Transport_WriteResponse_fake.call_count, 1);

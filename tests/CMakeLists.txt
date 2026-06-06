@@ -35,31 +35,6 @@ add_custom_target(coverage_report
 ################################################################################
 # Test targets
 ################################################################################
-
-## Property retrival
-# add_executable(test_UdsLine_GetProperties EXCLUDE_FROM_ALL)
-# target_sources(test_UdsLine_GetProperties PRIVATE
-#     test_UdsLine_GetProperties.cpp
-# )
-# target_link_libraries(test_UdsLine_GetProperties PRIVATE
-#     line-uds-api line-uds-sources 
-#     line-protocol-api line-protocol-sources
-#     line-protocol-adapter-sources
-# )
-# add_test(test_UdsLine_GetProperties)
-
-# ## Property setting
-# add_executable(test_UdsLine_SetProperties EXCLUDE_FROM_ALL)
-# target_sources(test_UdsLine_SetProperties PRIVATE
-#     test_UdsLine_SetProperties.cpp
-# )
-# target_link_libraries(test_UdsLine_SetProperties PRIVATE
-#     line-uds-api line-uds-sources 
-#     line-protocol-api line-protocol-sources
-#     line-protocol-adapter-sources
-# )
-# add_test(test_UdsLine_SetProperties)
-
 ## Generated code testing
 uds_codegen(
     TARGET test-uds-lib-single
@@ -73,7 +48,9 @@ target_sources(test_UdsLine_Properties PRIVATE
 )
 target_link_libraries(test_UdsLine_Properties PRIVATE
     line-uds-api
-    line-protocol-api line-protocol-sources
+    line-protocol-api
+    line-protocol-transport-source
+    line-protocol-diag-sources
     test-uds-lib-single
 )
 add_test(test_UdsLine_Properties)
@@ -85,7 +62,9 @@ target_sources(test_UdsLine_ServiceCall PRIVATE
 )
 target_link_libraries(test_UdsLine_ServiceCall PRIVATE
     line-uds-api
-    line-protocol-api line-protocol-sources
+    line-protocol-api
+    line-protocol-transport-source
+    line-protocol-diag-sources
     test-uds-lib-single
 )
 add_test(test_UdsLine_ServiceCall)
