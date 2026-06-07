@@ -13,9 +13,13 @@ project(
 # Options
 ################################################################################
 option(UDS_LINE_BUILD_TESTS "Enables library test cases" OFF)
+option(UDS_LINE_BUILD_DOCS "Enables library documentation" OFF)
 
+################################################################################
+# Dependencies
+################################################################################
 include(tools/cmake/CPM.cmake)
-CPMAddPackage("gh:c4deszes/bike-line-protocol@0.3.0")
+CPMAddPackage("gh:c4deszes/bike-line-protocol@0.4.0")
 
 find_package(Python REQUIRED)
 
@@ -61,21 +65,6 @@ endfunction()
 ################################################################################
 if(UDS_LINE_BUILD_TESTS)
     enable_testing()
-    include(FetchContent)
-    include(GoogleTest)
-
-    FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        release-1.12.0
-    )
-    FetchContent_Declare(
-        fff
-        GIT_REPOSITORY https://github.com/meekrosoft/fff.git
-        GIT_TAG        5111c61e1ef7848e3afd3550044a8cf4405f4199
-    )
-
-    FetchContent_MakeAvailable(googletest fff)
     add_subdirectory(tests)
 endif()
 

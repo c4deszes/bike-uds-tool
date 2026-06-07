@@ -4,18 +4,29 @@
 #include "line_diagnostics.h"
 
 {% for profile in config.profiles %}
-UDS_Properties_{{profile.name}}_t UDS_Properties_{{profile.name}};
 
+/* UDS Property type information */
+{% for property in profile.properties -%}
+const uds_property_t UDS_PROP_{{profile.name}}_{{property.prop_name}} = {
+    .property_id = UDS_PROP_{{profile.name}}_{{property.prop_name}}_ID,
+    .storage_class = uds_storage_class_{{property.storage_class}},
+    .value_ptr = &UDS_{{profile.name}}_Properties.{{property.prop_name}}
+};
 
-void UDS_ResetProperties_{{profile.name}}(void) {
-    {% for property in profile.properties %}
-    {%- if "UdsNumericProperty" in property.__class__.__name__ %}
-    UDS_Properties_{{profile.name}}.{{property.prop_name}} = {{property.default_value}};
-    {%- elif "UdsBooleanProperty" in property.__class__.__name__ %}
-    UDS_Properties_{{profile.name}}.{{property.prop_name}} = {{"true" if property.default_value else "false"}};
-    {%- elif "UdsEnumProperty" in property.__class__.__name__ and property.default_value != None %}
-    UDS_Properties_{{profile.name}}.{{property.prop_name}} = UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_VALUE_{{property.default_value}};
-    {%- endif %}
+{% endfor %}
+
+/* UDS Property container for {{profile.name}} */
+UDS_{{profile.name}}_Properties_t UDS_{{profile.name}}_Properties;
+
+void UDS_{{profile.name}}_ResetProperties(void) {
+    {% for property in profile.properties -%}
+    {% if "UdsIntTypeDefinition" in property.typedef.__class__.__name__ -%}
+    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT;
+    {% elif "UdsBoolTypeDefinition" in property.typedef.__class__.__name__ -%}
+    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT;
+    {% elif "UdsEnumTypeDefinition" in property.typedef.__class__.__name__ -%}
+    UDS_{{profile.name}}_Properties.{{property.prop_name}} = UDS_PROP_{{profile.name}}_{{property.prop_name}}_DEFAULT;
+    {% endif -%}
     {% endfor %}
 }
 
@@ -52,8 +63,8 @@ static void UDS_{{profile.name}}_ResetGetPropertyResponse() {
 void UDS_{{profile.name}}_OnGetProperty(uint16_t property_id) {
     switch (property_id) {
         {% for property in profile.properties %}
-        case UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID: {
-            {{property.get_ctype()}} value = UDS_Properties_{{profile.name}}.{{property.prop_name}};
+        case UDS_PROP_{{profile.name}}_{{property.prop_name}}_ID: {
+            {{property.typedef.get_ctype()}} value = UDS_{{profile.name}}_Properties.{{property.prop_name}};
             UDS_{{profile.name}}_EnqueueGetPropertyResponse(property_id, sizeof(value), (uint8_t*)&value);
             break;
         }
@@ -140,25 +151,32 @@ static void UDS_{{profile.name}}_ResetSetPropertyResponse() {
     UDS_{{profile.name}}_SetProperty_Status = UDS_PROPERTY_SET_RETURN_NO_REQUEST;
 }
 
-static void _UDS_{{profile.name}}_AppEmptyHandler(void) {
+static void _UDS_{{profile.name}}_OnChangeEmptyHandler(void) {
     // do nothing
 }
 
 {% for property in profile.properties -%}
-void UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}(void) __attribute__((weak, alias("_UDS_{{profile.name}}_AppEmptyHandler")));
+void UDS_{{profile.name}}_{{property.prop_name}}_OnChange(void) __attribute__((weak, alias("_UDS_{{profile.name}}_OnChangeEmptyHandler")));
 {% endfor %}
+
+static void UDS_{{profile.name}}_OnChangeEmptyHandler(const uds_property_t* property) {
+    // do nothing
+}
+
+void UDS_{{profile.name}}_OnPropertyChange(const uds_property_t* property) __attribute__((weak, alias("UDS_{{profile.name}}_OnChangeEmptyHandler")));
 
 void UDS_{{profile.name}}_OnSetProperty(uint16_t property_id, uint8_t size, uint8_t* data) {
     switch(property_id) {
         {% for property in profile.properties %}
-        case UDS_APP_PROPERTY_{{profile.name}}_{{property.prop_name}}_ID: {
-            if (size != sizeof({{property.get_ctype()}})) {
+        case UDS_PROP_{{profile.name}}_{{property.prop_name}}_ID: {
+            if (size != sizeof({{property.typedef.get_ctype()}})) {
                 UDS_{{profile.name}}_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_WRITE_FAILURE);
                 break;
             }
-            {{property.get_ctype()}} value = *(({{property.get_ctype()}}*)data);
-            UDS_Properties_{{profile.name}}.{{property.prop_name}} = value;
-            UDS_App_OnPropertyChange_{{profile.name}}_{{property.prop_name}}();
+            {{property.typedef.get_ctype()}} value = *(({{property.typedef.get_ctype()}}*)data);
+            UDS_{{profile.name}}_Properties.{{property.prop_name}} = value;
+            UDS_{{profile.name}}_{{property.prop_name}}_OnChange();
+            UDS_{{profile.name}}_OnPropertyChange(&UDS_PROP_{{profile.name}}_{{property.prop_name}});
             UDS_{{profile.name}}_EnqueueSetPropertyResponse(property_id, UDS_PROPERTY_SET_RETURN_SUCCESS);
             break;
         }
@@ -212,16 +230,149 @@ bool UDS_{{profile.name}}_LINE_SetReturnHandler(uint16_t request, uint8_t* size,
     return false;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+struct {
+    bool response_pending;
+    uint8_t response_status;
+    uint16_t service_id;
+} UDS_Service_{{profile.name}}_ServiceLess_status;
+
+{% for service in profile.services %}
+
+struct {
+    bool request_pending;
+    bool response_pending;
+    uint8_t response_status;
+} UDS_Service_{{profile.name}}_{{service.name}}_status;
+
+UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t UDS_Service_{{profile.name}}_{{service.name}}_request;
+UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t UDS_Service_{{profile.name}}_{{service.name}}_response;
+
+void UDS_{{profile.name}}_{{service.name}}_OnServiceRequest_default(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t*, UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t*) {}
+void UDS_{{profile.name}}_{{service.name}}_OnServiceRequest(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t*, UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t*) __attribute__((weak, alias("UDS_{{profile.name}}_{{service.name}}_OnServiceRequest_default")));
+
+bool UDS_{{profile.name}}_{{service.name}}_HasPendingServiceRequest(void) {
+    return UDS_Service_{{profile.name}}_{{service.name}}_status.request_pending;
+}
+
+void UDS_{{profile.name}}_{{service.name}}_ClearPendingServiceRequest(void) {
+    UDS_Service_{{profile.name}}_{{service.name}}_status.request_pending = false;
+    UDS_Service_{{profile.name}}_{{service.name}}_status.response_status = UDS_SERVICE_CALL_NO_REQUEST;
+}
+
+UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t* UDS_{{profile.name}}_{{service.name}}_GetPendingServiceRequest(void) {
+    return &UDS_Service_{{profile.name}}_{{service.name}}_request;
+}
+
+UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t* UDS_{{profile.name}}_{{service.name}}_GetPendingServiceResponse(void) {
+    return &UDS_Service_{{profile.name}}_{{service.name}}_response;
+}
+
+void UDS_{{profile.name}}_{{service.name}}_FinishServiceRequest(uint8_t response_status) {
+    UDS_Service_{{profile.name}}_{{service.name}}_status.response_status = response_status;
+    UDS_Service_{{profile.name}}_{{service.name}}_status.request_pending = false;
+    UDS_Service_{{profile.name}}_{{service.name}}_status.response_pending = true;
+}
+
 {% endfor %}
+
+void UDS_{{profile.name}}_LINE_ServiceCallHandler(uint16_t request, uint8_t size, uint8_t* payload) {
+    if (size >= 2) {
+        uint16_t service_id = (((uint16_t)payload[0]) << 8) | payload[1];
+
+        switch (service_id) {
+            {% for service in profile.services %}
+            case UDS_SERVICE_{{profile.name}}_{{service.name}}_ID: {
+                UDS_Service_{{profile.name}}_{{service.name}}_status.request_pending = true;
+                UDS_Service_{{profile.name}}_{{service.name}}_status.response_pending = true;
+                UDS_Service_{{profile.name}}_{{service.name}}_status.response_status = UDS_SERVICE_CALL_NOT_READY;
+
+                if (size - 2 != sizeof(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t)) {
+                    UDS_{{profile.name}}_{{service.name}}_FinishServiceRequest(UDS_SERVICE_CALL_BAD_REQUEST);
+                    break;
+                }
+                else {
+                    // Fill request context
+                    for (int i = 0; i < sizeof(UDS_Service_{{profile.name}}_{{service.name}}_RequestContext_t); i++) {
+                        ((uint8_t*)&UDS_Service_{{profile.name}}_{{service.name}}_request)[i] = payload[2 + i];
+                    }
+
+                    // Process the request
+                    UDS_{{profile.name}}_{{service.name}}_OnServiceRequest(&UDS_Service_{{profile.name}}_{{service.name}}_request, &UDS_Service_{{profile.name}}_{{service.name}}_response);
+                    break;
+                }
+            }
+            {% endfor %}
+            default: {
+                // Handle unknown service ID
+                UDS_Service_{{profile.name}}_ServiceLess_status.response_pending = true;
+                UDS_Service_{{profile.name}}_ServiceLess_status.response_status = UDS_SERVICE_CALL_NO_SUCH_SERVICE;
+                UDS_Service_{{profile.name}}_ServiceLess_status.service_id = service_id;
+                break;
+            }
+        }
+    }
+    else {
+        UDS_Service_{{profile.name}}_ServiceLess_status.response_pending = true;
+        UDS_Service_{{profile.name}}_ServiceLess_status.response_status = UDS_SERVICE_CALL_BAD_REQUEST;
+        UDS_Service_{{profile.name}}_ServiceLess_status.service_id = 0;
+    }
+}
+
+bool UDS_{{profile.name}}_LINE_ServiceResponseHandler(uint16_t request, uint8_t* size, uint8_t* payload) {
+    if (UDS_Service_{{profile.name}}_ServiceLess_status.response_pending) {
+        payload[0] = (UDS_Service_{{profile.name}}_ServiceLess_status.service_id >> 8) & 0xFF;
+        payload[1] = UDS_Service_{{profile.name}}_ServiceLess_status.service_id & 0xFF;
+        payload[2] = UDS_Service_{{profile.name}}_ServiceLess_status.response_status;
+        *size = 3;
+
+        UDS_Service_{{profile.name}}_ServiceLess_status.service_id = 0;
+        UDS_Service_{{profile.name}}_ServiceLess_status.response_pending = false;
+        return true;
+    }
+    else {
+        {% for service in profile.services %}
+        if (UDS_Service_{{profile.name}}_{{service.name}}_status.response_pending) {
+            uint16_t service_id = UDS_SERVICE_{{profile.name}}_{{service.name}}_ID;
+            payload[0] = (service_id >> 8) & 0xFF;
+            payload[1] = (service_id & 0xFF);
+            payload[2] = UDS_Service_{{profile.name}}_{{service.name}}_status.response_status;
+
+            if (UDS_Service_{{profile.name}}_{{service.name}}_status.response_status == UDS_SERVICE_CALL_SUCCESS) {
+                // Fill response context
+                for (int i = 0; i < sizeof(UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t); i++) {
+                    payload[3 + i] = ((uint8_t*)&UDS_Service_{{profile.name}}_{{service.name}}_response)[i];
+                }
+                *size = 3 + sizeof(UDS_Service_{{profile.name}}_{{service.name}}_ResponseContext_t);
+            }
+            else {
+                *size = 3; // Only status code
+            }
+
+            UDS_Service_{{profile.name}}_{{service.name}}_status.response_pending = false;
+            return true;
+        }
+        {% endfor %}
+    }
+}
+
+{% endfor %}
+
+////////////////////////////////////////////////////////////////////////////////
 
 void UDS_Init(void) {
 {% for profile in config.profiles %}
-    UDS_ResetProperties_{{profile.name}}();
+    UDS_{{profile.name}}_ResetProperties();
 
     LINE_Diag_RegisterUnicastListener({{profile.channel}}, UDS_PROPERTY_GET_CALL_REQUEST_ID, UDS_LINE_{{profile.name}}_GetCallHandler);
     LINE_Diag_RegisterUnicastPublisher({{profile.channel}}, UDS_PROPERTY_GET_RETURN_REQUEST_ID, UDS_LINE_{{profile.name}}_GetReturnHandler);
 
     LINE_Diag_RegisterUnicastListener({{profile.channel}}, UDS_PROPERTY_SET_CALL_REQUEST_ID, UDS_{{profile.name}}_LINE_SetCallHandler);
     LINE_Diag_RegisterUnicastPublisher({{profile.channel}}, UDS_PROPERTY_SET_RETURN_REQUEST_ID, UDS_{{profile.name}}_LINE_SetReturnHandler);
+
+    LINE_Diag_RegisterUnicastListener({{profile.channel}}, UDS_SERVICE_CALL_REQUEST_ID, UDS_{{profile.name}}_LINE_ServiceCallHandler);
+    LINE_Diag_RegisterUnicastPublisher({{profile.channel}}, UDS_SERVICE_RETURN_REQUEST_ID, UDS_{{profile.name}}_LINE_ServiceResponseHandler);
+
 {% endfor %}
 }

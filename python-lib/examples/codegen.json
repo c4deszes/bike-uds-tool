@@ -1,0 +1,10 @@
+{
+    "FrontLight": {
+        "channel": 0,
+        "profile": "uds/profiles/front_light.json"
+    },
+    "RearLight": {
+        "channel": 1,
+        "profile": "uds/profiles/rear_light.json"
+    }
+}

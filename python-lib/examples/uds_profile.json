@@ -1,0 +1,88 @@
+{
+    "services": {
+        "ReloadProperties": {
+            "id": "0x3000",
+            "args": [],
+            "returns": "uint8"
+        },
+        "CalibrateTemperature": {
+            "id": "0x3010",
+            "args": [
+                {"name": "Temperature", "type": "uint8"}
+            ],
+            "returns": "uint8"
+        },
+        "CalibrateBrightness": {
+            "id": "0x3020",
+            "args": [
+                {"name": "Brightness", "type": "uint16"}
+            ]
+        },
+        "EndBrightnessCalibration": {
+            "id": "0x3021",
+            "args": [],
+            "returns": "uint8"
+        }
+    },
+    "properties": {
+        "Example_Property1": {
+            "id": "0x2000",
+            "type": "uint16",
+            "min": 0,
+            "max": 1000,
+            "storage": "default"
+        },
+        "Example_Property2": {
+            "id": "0x2001",
+            "type": "uint16",
+            "min": 0,
+            "max": 1000,
+            "default": 100,
+            "storage": "eeprom"
+        },
+        "Example_Property3": {
+            "id": "0x2002",
+            "type": "int16",
+            "min": 0,
+            "max": 1000,
+            "storage": "volatile",
+            "readonly": true
+        },
+        "Example_Property4": {
+            "id": "0x2003",
+            "type": "int16",
+            "min": 0,
+            "max": 1000,
+            "default": -40,
+            "readonly": false
+        },
+        "Example_Option1": {
+            "id": "0x2004",
+            "type": "bool"
+        },
+        "Example_Option2": {
+            "id": "0x2005",
+            "type": "bool",
+            "default": true
+        },
+        "Example_Choice1": {
+            "id": "0x2006",
+            "type": "enum",
+            "values": [
+                "One",
+                "Two",
+                "Three"
+            ]
+        },
+        "Example_Choice2": {
+            "id": "0x2007",
+            "type": "enum",
+            "values": [
+                "One",
+                "Two",
+                "Three"
+            ],
+            "default": "Two"
+        }
+    }
+}
