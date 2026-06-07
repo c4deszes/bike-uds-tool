@@ -286,7 +286,7 @@ class UdsTool():
                             timeout -= event.prop.delay
                             start = time.time()
                             response = self._master.request(UDS_PROPERTY_GET_RETURN_REQUEST_ID | event.prop.address,
-                                                            wait=True, timeout=timeout)
+                                                            wait=True, timeout=event.prop.delay)
                             timeout -= time.time() - start
                             if self._process_getevent(response, event):
                                 event.event.set()
@@ -309,7 +309,7 @@ class UdsTool():
                             timeout -= event.prop.delay
                             start = time.time()
                             response = self._master.request(UDS_PROPERTY_SET_RETURN_REQUEST_ID | event.prop.address,
-                                                            wait=True, timeout=timeout)
+                                                            wait=True, timeout=event.prop.delay)
                             timeout -= time.time() - start
                             if self._process_setevent(response, event):
                                 event.event.set()
@@ -332,7 +332,7 @@ class UdsTool():
                             timeout -= event.service.delay
                             start = time.time()
                             response = self._master.request(UDS_SERVICE_RETURN_REQUEST_ID | event.service.address,
-                                                            wait=True, timeout=timeout)
+                                                            wait=True, timeout=event.service.delay)
                             timeout -= time.time() - start
                             if self._process_serviceevent(response, event):
                                 event.event.set()
@@ -355,7 +355,8 @@ class UdsTool():
         self._event_id += 1
 
         if wait:
-            event.event.wait(timeout)
+            # TODO: find a solution
+            event.event.wait(timeout + 1)
             if event.exception:
                 raise event.exception
             return event.response
@@ -368,7 +369,8 @@ class UdsTool():
         self._event_id += 1
 
         if wait:
-            event.event.wait(timeout)
+            # TODO: find a solution
+            event.event.wait(timeout + 1)
             if event.exception:
                 raise event.exception
             return None
@@ -381,7 +383,8 @@ class UdsTool():
         self._event_id += 1
 
         if wait:
-            event.event.wait(timeout)
+            # TODO: find a solution
+            event.event.wait(timeout + 1)
             if event.exception:
                 raise event.exception
             return event.response

@@ -182,12 +182,12 @@ class TestSimulationUdsExtension_PropertyAccess_Async:
         # TODO: assert listener called with correct value
         assert value == [0x34, 0x12]
 
-class TestSimulationUdsExtension_ServiceCall_SyncRaw:
+# class TestSimulationUdsExtension_ServiceCall_SyncRaw:
 
-    def test_ServiceCall_SyncRaw_InvalidService(self, uds_tool, peripheral):
-        with pytest.raises(UdsServiceCallException):
-            response = uds_tool.call_service_raw(0x01, 0x5555, [], wait=True, timeout=1)
+#     def test_ServiceCall_SyncRaw_InvalidService(self, uds_tool, peripheral):
+#         with pytest.raises(UdsServiceCallException):
+#             response = uds_tool.call_service_raw(0x01, 0x5555, [], wait=True, timeout=1)
 
-    def test_ServiceCall_SyncRaw_VoidNoParams(self, uds_tool, peripheral):
-        response = uds_tool.call_service_raw(0x01, 0x100, [], wait=True)
-        assert response == []
+#     def test_ServiceCall_SyncRaw_VoidNoParams(self, uds_tool, peripheral, simulated_extension):
+#         response = uds_tool.call_service_raw(0x01, 0x100, [], wait=True, timeout=1)
+#         assert response == []

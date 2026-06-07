@@ -10,6 +10,9 @@ class UdsExtensionListener():
     def on_property_change(self, property_id: int, buffer: bytearray, value: any) -> None:
         pass
 
+    def on_service_call(self, service_id: int, buffer: list[int], request: any) -> None:
+        pass
+
 class SimulatedUdsExtension(SimulatedDiagnosticExtension):
 
     def __init__(self, profile: UdsProfile):
@@ -100,6 +103,14 @@ class SimulatedUdsExtension(SimulatedDiagnosticExtension):
             return self._service_id, self._service_data
         else:
             return None
+
+    def set_service_call_response(self, response_data: list[int]) -> None:
+        if self._service_id is not None:
+            self._service_response_data = response_data
+
+    def finish_service_call(self, status: int) -> None:
+        if self._service_id is not None:
+            self._service_status = status
 
     def uds_call_service(self, data: list[int]) -> None:
         if self._service_id is not None:
